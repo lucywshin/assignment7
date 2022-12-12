@@ -182,6 +182,34 @@ public class Utils {
   }
 
   /**
+   * Converts string input to be requested format for stocks.
+   *
+   * @param input String input to be converted.
+   * @return list of pairs with stock symbol and weight.
+   * @throws IllegalArgumentException when a parsing error occurs.
+   */
+  public static List<Pair<String, BigDecimal>> convertStringToListFormat(String input)
+          throws IllegalArgumentException {
+    List<Pair<String, BigDecimal>> result = new ArrayList<>();
+    String[] stocks = input.split(";");
+
+    if (stocks.length == 0) {
+      return result;
+    }
+
+    try {
+      for (String s : stocks) {
+        List<String> currentStockSplit = Arrays.asList(s.split(","));
+        result.add(
+                new Pair<>(currentStockSplit.get(0), new BigDecimal(currentStockSplit.get(1))));
+      }
+    } catch (NumberFormatException e) {
+      throw new IllegalArgumentException("the provided string could not be parsed!");
+    }
+    return result;
+  }
+
+  /**
    * Checks whether string input is in requested format for stocks.
    *
    * @param input String input to be validated.

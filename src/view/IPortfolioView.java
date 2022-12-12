@@ -206,4 +206,16 @@ public interface IPortfolioView {
   String displayFlexiblePortfolioCommissionFeePromptPage(BigDecimal currentCommissionFee,
       List<String> prompts,
       String errorMessage);
+
+  /**
+   * Displays the rebalance prompt page.
+   *
+   * @param portfolioName the name of the portfolio.
+   * @param prompts              the available prompts on this page.
+   * @param errorMessage         the error message to be displayed if there is an error.
+   * @return a string with the contents of the page to be displayed.
+   */
+  String displayRebalancePage(String portfolioName, List<String> prompts,
+                              List<IObservableFlexiblePortfolioStock> currentPortfolioStocks,
+                              String errorMessage);
 }

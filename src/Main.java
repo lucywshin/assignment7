@@ -15,7 +15,7 @@ class Main {
   public static void main(String[] args) {
     IPortfolioModel model = new PortfolioModel();
 
-    boolean isOldGui = false;
+    boolean isOldGui = true;
 
     for (String arg : args) {
       if (arg.equals("oldGui")) {
