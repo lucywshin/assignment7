@@ -2,10 +2,12 @@ package model;
 
 import common.pair.Pair;
 import common.triplet.Triplet;
+
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.Date;
 import java.util.List;
+
 import model.chart.IChart;
 import model.portfolio.IDollarCostInvestment;
 import model.portfolio.IFlexiblePortfolio;
@@ -13,6 +15,7 @@ import model.portfolio.IObservableFlexiblePortfolioStock;
 import model.portfolio.IPortfolio;
 import model.portfolio.IPortfolioStock;
 import model.portfolio.IPortfolioStockValue;
+import model.portfolio.IRebalance;
 import model.portfolio.IStock;
 import model.portfolio.StockDataSourceException;
 import model.portfolio.eRecurringIntervalType;
@@ -309,6 +312,21 @@ public interface IPortfolioModel {
       throws IllegalArgumentException, StockDataSourceException;
 
   /**
+   * Rebalances the portfolio specified.
+   *
+   * @param portfolioId          the identifier of the flexible portfolio.
+   * @param date                 the first date on which the dollar cost investment is to be
+   *                             triggered.
+   * @return a pair containing the id of the portfolio and the new list of stocks in the portfolio.
+   * @throws IllegalArgumentException when date provided is invalid or stocks provided are invalid.
+   * @throws StockDataSourceException when an error occurs in the stock data source.
+   */
+  Pair<Integer, List<IObservableFlexiblePortfolioStock>> addRebalance(
+          int portfolioId, Date date,
+          List<Pair<String, BigDecimal>> stocksWithPercentage)
+          throws IllegalArgumentException, StockDataSourceException;
+
+  /**
    * Gets all the dollar cost investments in the specified portfolio.
    *
    * @param portfolioId the identifier of the flexible portfolio.
@@ -318,4 +336,15 @@ public interface IPortfolioModel {
    */
   Pair<Integer, List<Pair<String, IDollarCostInvestment>>> getDollarCostInvestments(
       int portfolioId) throws IllegalArgumentException;
+
+  /**
+   * Gets all the rebalance investments in the specified portfolio.
+   *
+   * @param portfolioId the identifier of the flexible portfolio.
+   * @return a pair containing the id of the portfolio and a list of pairs with the stock symbol and
+   *     the rebalance investment on that stock.
+   * @throws IllegalArgumentException when date provided is invalid or stocks provided are invalid.
+   */
+  Pair<Integer, List<Pair<String, IRebalance>>> getRebalance(
+          int portfolioId) throws IllegalArgumentException;
 }

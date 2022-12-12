@@ -1,11 +1,8 @@
 package view;
 
 import common.pair.Pair;
-import features.IPortfolioManagerFeatures;
-import java.awt.BorderLayout;
-import java.awt.CardLayout;
-import java.awt.Dimension;
-import java.awt.FlowLayout;
+
+import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.ItemEvent;
@@ -14,19 +11,16 @@ import java.io.File;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
-import javax.swing.BoxLayout;
-import javax.swing.JButton;
-import javax.swing.JComboBox;
-import javax.swing.JFileChooser;
-import javax.swing.JFrame;
-import javax.swing.JLabel;
-import javax.swing.JPanel;
-import javax.swing.JTextArea;
+
+import javax.swing.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
+
+import features.IPortfolioManagerFeatures;
 import model.chart.IChart;
 import model.portfolio.IDollarCostInvestment;
 import model.portfolio.IObservableFlexiblePortfolioStock;
 import model.portfolio.IPortfolioStockValue;
+import model.portfolio.IRebalance;
 
 /**
  * An implementation of the JFrame view to show the GUI version of this application.
@@ -46,6 +40,8 @@ public class JFrameView extends JFrame implements IJFrameView {
     VALUE("Value"),
     COST_BASIS("Cost Basis"),
     DOLLAR_COST("Dollar Cost"),
+    REBALANCE("Rebalance"),
+    REBALANCE_DATE("Rebalance Date"),
     CHART("Chart"),
     CREATE_PORTFOLIO("Create Portfolio"),
     IMPORT("Import"),
@@ -100,6 +96,7 @@ public class JFrameView extends JFrame implements IJFrameView {
     VALUE("Selected Portfolio Value"),
     COST_BASIS("Selected Portfolio Cost Basis"),
     DOLLAR_COST("Selected Portfolio Dollar Cost"),
+    REBALANCE("Selected Portfolio Rebalance"),
     CHART("Selected Portfolio Chart");
 
     private final String string;
@@ -147,6 +144,11 @@ public class JFrameView extends JFrame implements IJFrameView {
           selectedPortfolioDollarCostPanel.setPortfolioId(portfolioId);
           cl.show(selectedPortfolioOperationsCardPanel,
               eSelectedPortfolioCard.DOLLAR_COST.getSelectedPortfolioCardVal());
+          break;
+        case REBALANCE:
+          selectedPortfolioRebalancePanel.setPortfolioId(portfolioId);
+          cl.show(selectedPortfolioOperationsCardPanel,
+                  eSelectedPortfolioCard.REBALANCE.getSelectedPortfolioCardVal());
           break;
         case CHART:
           selectedPortfolioChartPanel.setPortfolioId(portfolioId);
@@ -204,6 +206,8 @@ public class JFrameView extends JFrame implements IJFrameView {
   private final JButton sellButton;
   private final JButton dollarCostButton;
 
+  private final JButton rebalanceButton;
+
   private final JLabel fileImportDisplay;
   private final JLabel fileExportDisplay;
 
@@ -214,6 +218,7 @@ public class JFrameView extends JFrame implements IJFrameView {
   private final JSingleDateOperationPanel selectedPortfolioValuePanel;
   private final JSingleDateOperationPanel selectedPortfolioCostBasisPanel;
   private final JDollarCostPanel selectedPortfolioDollarCostPanel;
+  private final JRebalancePanel selectedPortfolioRebalancePanel;
   private final JChartPanel selectedPortfolioChartPanel;
 
   //</editor-fold>
@@ -360,6 +365,12 @@ public class JFrameView extends JFrame implements IJFrameView {
     this.dollarCostButton.addActionListener(portfolioOperationsRedirector);
     portfolioOperationsOptionsCardPanel.add(this.dollarCostButton);
 
+    this.rebalanceButton = new JButton("Rebalance");
+    this.rebalanceButton.setActionCommand(
+            eHomePageActionCommand.REBALANCE.getActionCommandVal());
+    this.rebalanceButton.addActionListener(portfolioOperationsRedirector);
+    portfolioOperationsOptionsCardPanel.add(this.rebalanceButton);
+
     JButton chartButton = new JButton("Chart");
     chartButton.setActionCommand(eHomePageActionCommand.CHART.getActionCommandVal());
     chartButton.addActionListener(portfolioOperationsRedirector);
@@ -471,6 +482,13 @@ public class JFrameView extends JFrame implements IJFrameView {
     this.selectedPortfolioOperationsCardPanel
         .add(selectedPortfolioDollarCostPanel,
             eSelectedPortfolioCard.DOLLAR_COST.getSelectedPortfolioCardVal());
+
+    // rebalance portfolio
+    this.selectedPortfolioRebalancePanel
+            = new JRebalancePanel(eHomePageActionCommand.REBALANCE, this.errorMessageLabel);
+    this.selectedPortfolioOperationsCardPanel
+            .add(selectedPortfolioRebalancePanel,
+                    eSelectedPortfolioCard.REBALANCE.getSelectedPortfolioCardVal());
 
     // chart
     this.selectedPortfolioChartPanel
@@ -593,6 +611,7 @@ public class JFrameView extends JFrame implements IJFrameView {
     this.selectedPortfolioValuePanel.addFeatures(features);
     this.selectedPortfolioCostBasisPanel.addFeatures(features);
     this.selectedPortfolioDollarCostPanel.addFeatures(features);
+    this.selectedPortfolioRebalancePanel.addFeatures(features);
     this.selectedPortfolioChartPanel.addFeatures(features);
   }
 
@@ -641,6 +660,19 @@ public class JFrameView extends JFrame implements IJFrameView {
   public void loadPortfolioDollarCostInvestments(
       List<Pair<String, IDollarCostInvestment>> dollarCostInvestments) {
     this.selectedPortfolioDollarCostPanel.loadPortfolioDollarCostInvestments(dollarCostInvestments);
+  }
+
+  @Override
+  public void loadRebalance(
+          List<Pair<String, IRebalance>> rebalance,
+          Pair<BigDecimal, List<IPortfolioStockValue>> value) throws Exception {
+    this.selectedPortfolioRebalancePanel.loadRebalanceForPortfolio(rebalance, value);
+  }
+
+  @Override
+  public void loadRebalanceDate(
+          Pair<BigDecimal, List<IPortfolioStockValue>> value) {
+    this.selectedPortfolioRebalancePanel.loadRebalanceForPortfolioDate(value);
   }
 
   @Override

@@ -2,6 +2,8 @@ package model.portfolio;
 
 import java.math.BigDecimal;
 import java.util.Date;
+import java.util.List;
+import java.util.Map;
 
 /**
  * This interface represents a portfolio stock in a flexible portfolio.
@@ -34,4 +36,17 @@ public interface IFlexiblePortfolioStock extends IObservableFlexiblePortfolioSto
   void addStockDollarCostInvestment(IStockDataSource source,
       IDollarCostInvestment dollarCostInvestment)
       throws IllegalArgumentException, StockDataSourceException;
+
+  /**
+   * Add rebalanced investments for this flexible portfolio stock.
+   *
+   * @param rebalance the investment to be added.
+   * @throws IllegalArgumentException when the date provided is not valid.
+   */
+  void addStockRebalance(IStockDataSource source, IRebalance rebalance)
+          throws IllegalArgumentException;
+
+  List<IRebalance> getRebalanceData(Map<Date, IRebalance> map);
+
+
 }

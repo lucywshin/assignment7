@@ -2,6 +2,7 @@ package model;
 
 import common.pair.Pair;
 import common.triplet.Triplet;
+
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.nio.file.Files;
@@ -9,6 +10,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Date;
 import java.util.List;
+
 import model.alphavantage.AlphaVantageAPI;
 import model.chart.ChartService;
 import model.chart.IChart;
@@ -22,6 +24,7 @@ import model.portfolio.IObservableFlexiblePortfolioStock;
 import model.portfolio.IPortfolio;
 import model.portfolio.IPortfolioStock;
 import model.portfolio.IPortfolioStockValue;
+import model.portfolio.IRebalance;
 import model.portfolio.IStock;
 import model.portfolio.IStockDataSource;
 import model.portfolio.Portfolio;
@@ -247,11 +250,31 @@ public class PortfolioModel implements IPortfolioModel {
   }
 
   @Override
+  public Pair<Integer, List<IObservableFlexiblePortfolioStock>> addRebalance(
+          int portfolioId, Date date,
+          List<Pair<String, BigDecimal>> stocksWithPercentage)
+          throws IllegalArgumentException, StockDataSourceException {
+    IFlexiblePortfolio portfolio = this.flexiblePortfolioStore.retrieve(portfolioId)
+            .addRebalance(this.dataSource, date, getFlexiblePortfolioValue
+                    (portfolioId, date).getO1(), stocksWithPercentage);
+
+    return new Pair<>(portfolioId, portfolio.getStocks());
+  }
+
+  @Override
   public Pair<Integer, List<Pair<String, IDollarCostInvestment>>> getDollarCostInvestments(
       int portfolioId) throws IllegalArgumentException {
     IFlexiblePortfolio portfolio = this.flexiblePortfolioStore.retrieve(portfolioId);
 
     return new Pair<>(portfolioId, portfolio.getDollarCostInvestments());
+  }
+
+  @Override
+  public Pair<Integer, List<Pair<String, IRebalance>>> getRebalance(
+          int portfolioId) throws IllegalArgumentException {
+    IFlexiblePortfolio portfolio = this.flexiblePortfolioStore.retrieve(portfolioId);
+
+    return new Pair<>(portfolioId, portfolio.getRebalanceData());
   }
 
   //</editor-fold>

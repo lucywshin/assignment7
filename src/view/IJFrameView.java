@@ -1,13 +1,16 @@
 package view;
 
 import common.pair.Pair;
-import features.IPortfolioManagerFeatures;
+
 import java.math.BigDecimal;
 import java.util.List;
+
+import features.IPortfolioManagerFeatures;
 import model.chart.IChart;
 import model.portfolio.IDollarCostInvestment;
 import model.portfolio.IObservableFlexiblePortfolioStock;
 import model.portfolio.IPortfolioStockValue;
+import model.portfolio.IRebalance;
 
 /**
  * This interface represents the JFrame GUI representation of the application.
@@ -77,6 +80,22 @@ public interface IJFrameView {
    */
   void loadPortfolioDollarCostInvestments(
       List<Pair<String, IDollarCostInvestment>> dollarCostInvestments);
+
+  /**
+   * Loads the portfolio's rebalance data.
+   *
+   * @param value a pair of the total portfolio value and a list of the individual stock values.
+   */
+  void loadRebalance(
+          List<Pair<String, IRebalance>> rebalance,
+          Pair<BigDecimal, List<IPortfolioStockValue>> value) throws Exception;
+
+  /**
+   * Loads the portfolio's rebalance data.
+   *
+   * @param value a pair of the total portfolio value and a list of the individual stock values.
+   */
+  void loadRebalanceDate(Pair<BigDecimal, List<IPortfolioStockValue>> value);
 
   /**
    * Loads the performance chart of a portfolio.

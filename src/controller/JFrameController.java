@@ -2,14 +2,18 @@ package controller;
 
 import common.pair.Pair;
 import common.triplet.Triplet;
-import features.IPortfolioManagerFeatures;
+
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
+
+import features.IPortfolioManagerFeatures;
 import model.IPortfolioModel;
 import model.portfolio.IPortfolioStockValue;
+import model.portfolio.IRebalance;
+import model.portfolio.StockDataSourceException;
 import model.portfolio.eRecurringIntervalType;
 import view.IJFrameView;
 
@@ -52,9 +56,9 @@ public class JFrameController implements IPortfolioManagerFeatures, IGuiControll
   @Override
   public void loadPortfolioList() {
     List<Pair<Integer, String>> portfolioNames = this.model.getAllFlexiblePortfolios()
-        .stream()
-        .map(p -> new Pair<>(p.getO1(), p.getO2().getName()))
-        .collect(Collectors.toList());
+            .stream()
+            .map(p -> new Pair<>(p.getO1(), p.getO2().getName()))
+            .collect(Collectors.toList());
 
     this.view.loadPortfoliosList(portfolioNames);
   }
@@ -115,7 +119,7 @@ public class JFrameController implements IPortfolioManagerFeatures, IGuiControll
 
   @Override
   public boolean buyStocksForPortfolio(int portfolioId, String symbol, BigDecimal volume,
-      Date transactionDate, BigDecimal commissionFees) {
+                                       Date transactionDate, BigDecimal commissionFees) {
     var stock = new Triplet<>(symbol, transactionDate, volume);
     List<Triplet<String, Date, BigDecimal>> stocksParam = new ArrayList<>();
 
@@ -136,7 +140,7 @@ public class JFrameController implements IPortfolioManagerFeatures, IGuiControll
 
   @Override
   public boolean sellStocksForPortfolio(int portfolioId, String symbol, BigDecimal volume,
-      Date transactionDate, BigDecimal commissionFees) {
+                                        Date transactionDate, BigDecimal commissionFees) {
     var stock = new Triplet<>(symbol, transactionDate, volume);
     List<Triplet<String, Date, BigDecimal>> stocksParam = new ArrayList<>();
 
@@ -159,7 +163,7 @@ public class JFrameController implements IPortfolioManagerFeatures, IGuiControll
   public boolean getPortfolioComposition(int portfolioId, Date date) {
     try {
       List<Pair<String, BigDecimal>> composition =
-          this.model.getFlexiblePortfolioComposition(portfolioId, date).getO2();
+              this.model.getFlexiblePortfolioComposition(portfolioId, date).getO2();
 
       this.view.loadPortfolioComposition(composition);
     } catch (Exception e) {
@@ -175,7 +179,7 @@ public class JFrameController implements IPortfolioManagerFeatures, IGuiControll
   public boolean getPortfolioValue(int portfolioId, Date date) {
     try {
       Pair<BigDecimal, List<IPortfolioStockValue>> value =
-          this.model.getFlexiblePortfolioValue(portfolioId, date);
+              this.model.getFlexiblePortfolioValue(portfolioId, date);
 
       this.view.loadPortfolioValue(value);
     } catch (Exception e) {
@@ -206,7 +210,58 @@ public class JFrameController implements IPortfolioManagerFeatures, IGuiControll
   public boolean loadDollarCostInvestmentsForPortfolio(int portfolioId) {
     try {
       this.view.loadPortfolioDollarCostInvestments(
-          this.model.getFlexiblePortfolio(portfolioId).getDollarCostInvestments());
+              this.model.getFlexiblePortfolio(portfolioId).getDollarCostInvestments());
+    } catch (Exception e) {
+      this.view.displayErrorMessage(e.getMessage());
+      return false;
+    }
+
+    this.view.displayErrorMessage(null);
+    return true;
+  }
+
+  @Override
+  public boolean loadPortfolioRebalanceDate(int portfolioId, Date date) {
+    try {
+      this.view.loadRebalanceDate(
+              this.model.getFlexiblePortfolioValue(portfolioId, date));
+    } catch (Exception e) {
+      this.view.displayErrorMessage(e.getMessage());
+      return false;
+    }
+
+    this.view.displayErrorMessage(null);
+    return true;
+  }
+
+  @Override
+  public boolean loadPortfolioRebalance(int portfolioId, Date date) {
+    try {
+      List<Pair<String, IRebalance>> rebalance = this.model.getFlexiblePortfolio(portfolioId).getRebalanceData();
+      Pair<BigDecimal, List<IPortfolioStockValue>> value = this.model.getFlexiblePortfolioValue(portfolioId, date);
+      this.view.loadRebalance(rebalance, value);
+      //this.view.loadRebalance(
+      //        this.model.getFlexiblePortfolio(portfolioId).getRebalanceData(),
+      //        this.model.getPortfolioValue(portfolioId, date));
+    } catch (Exception e) {
+      this.view.displayErrorMessage(e.getMessage());
+      return false;
+    }
+
+    this.view.displayErrorMessage(null);
+    return true;
+  }
+
+  @Override
+  public boolean addPortfolioRebalance(int portfolioId, Date date,
+                                       List<Pair<String, BigDecimal>> stocksWithPercentage)
+          throws IllegalArgumentException, StockDataSourceException {
+    try {
+      this.model.addRebalance(portfolioId, date, stocksWithPercentage);
+
+      if (!this.loadPortfolioRebalance(portfolioId, date)) {
+        return false;
+      }
     } catch (Exception e) {
       this.view.displayErrorMessage(e.getMessage());
       return false;
@@ -218,13 +273,13 @@ public class JFrameController implements IPortfolioManagerFeatures, IGuiControll
 
   @Override
   public boolean addDollarCostInvestmentForPortfolio(int portfolioId, Date date, BigDecimal amount,
-      List<Pair<String, BigDecimal>> stocksWithPercentage, BigDecimal commissionFee,
-      boolean isRecurring, Date endDate, eRecurringIntervalType intervalType,
-      Integer intervalDelta) {
+                                                     List<Pair<String, BigDecimal>> stocksWithPercentage, BigDecimal commissionFee,
+                                                     boolean isRecurring, Date endDate, eRecurringIntervalType intervalType,
+                                                     Integer intervalDelta) {
 
     try {
       this.model.addDollarCostInvestment(portfolioId, date, amount, stocksWithPercentage,
-          commissionFee, isRecurring, endDate, intervalType, intervalDelta);
+              commissionFee, isRecurring, endDate, intervalType, intervalDelta);
 
       if (!this.loadDollarCostInvestmentsForPortfolio(portfolioId)) {
         return false;
@@ -242,7 +297,7 @@ public class JFrameController implements IPortfolioManagerFeatures, IGuiControll
   public boolean loadPerformanceChart(int portfolioId, Date startDate, Date endDate) {
     try {
       this.view.loadPerformanceChart(
-          this.model.getPerformanceChart(portfolioId, startDate, endDate));
+              this.model.getPerformanceChart(portfolioId, startDate, endDate));
     } catch (Exception e) {
       this.view.displayErrorMessage(e.getMessage());
       return false;

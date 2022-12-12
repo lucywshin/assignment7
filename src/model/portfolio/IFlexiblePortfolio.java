@@ -123,10 +123,39 @@ public interface IFlexiblePortfolio extends IAbstractPortfolio {
       Integer intervalDelta) throws IllegalArgumentException, StockDataSourceException;
 
   /**
+   * Adds a dollar cost investment for this flexible portfolio.
+   *
+   * @param source               the data source which is to be used to fetch the values of the
+   *                             stocks.
+   * @param date                 the first date on which the dollar cost investment is to be
+   *                             triggered.
+   * @param stocksWithPercentage a list of pairs containing a stock, and it's percentage weight for
+   *                             the buy order.
+   * @return the portfolio with the new state.
+   * @throws IllegalArgumentException when date provided is invalid or stocks provided are invalid.
+   * @throws StockDataSourceException when an error occurs in the stock data source.
+   */
+  IFlexiblePortfolio addRebalance(IStockDataSource source, Date date,
+                                  BigDecimal totalValue,
+               List<Pair<String, BigDecimal>> stocksWithPercentage)
+          throws IllegalArgumentException, StockDataSourceException;
+
+  /**
    * Gets all the dollar cost investments scheduled for stocks of this flexible portfolio.
    *
    * @return a list of pairs containing the stock symbol and the dollar cost investment for that
    *     stock.
    */
   List<Pair<String, IDollarCostInvestment>> getDollarCostInvestments();
+
+  /**
+   * Gets all the rebalance data.
+   *
+   * @return a list of pairs containing the stock symbol and the rebalance for that
+   *     stock.
+   */
+  List<Pair<String, IRebalance>>  getRebalanceData();
+
+
+
 }

@@ -3,13 +3,18 @@ package model.portfolio;
 import common.Utils;
 import common.pair.Pair;
 import common.triplet.Triplet;
+
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+
 import jdk.jshell.spi.ExecutionControl.NotImplementedException;
 import model.chart.IChart;
 import model.chart.IChartService;
@@ -24,6 +29,8 @@ public class FlexiblePortfolio extends AbstractPortfolio implements IFlexiblePor
 
   private final List<IFlexiblePortfolioStock> stocks;
   private final Set<String> stockSymbolsSet;
+
+  private Map<String, IRebalance> rebalanceMap;
 
   //</editor-fold>
 
@@ -42,11 +49,12 @@ public class FlexiblePortfolio extends AbstractPortfolio implements IFlexiblePor
    * @throws IllegalArgumentException when an error is present in the provided stocks input.
    */
   public FlexiblePortfolio(IStockDataSource stockDataSource, String name,
-      List<IFlexiblePortfolioStock> stocks) throws IllegalArgumentException {
+                           List<IFlexiblePortfolioStock> stocks) throws IllegalArgumentException {
     super(name);
 
     // setup all stocks available in portfolio
     this.stockSymbolsSet = new HashSet<>();
+    this.rebalanceMap = new HashMap<>();
 
     this.stocks = new ArrayList<>();
     if (stocks != null) {
@@ -55,11 +63,11 @@ public class FlexiblePortfolio extends AbstractPortfolio implements IFlexiblePor
         List<Triplet<String, Date, BigDecimal>> transactions = new ArrayList<>();
         for (var transaction : s.getTransactions()) {
           transactions.add(
-              new Triplet<>(s.getSymbol(), transaction.getO1(), transaction.getO2().getO1()));
+                  new Triplet<>(s.getSymbol(), transaction.getO1(), transaction.getO2().getO1()));
         }
         validateFlexibleStocksInput(transactions);
         validateIPODateAndDelistingDate(stockDataSource, s.getFirstTransaction().getO1(),
-            s.getSymbol());
+                s.getSymbol());
 
         this.stockSymbolsSet.add(s.getSymbol());
         this.stocks.add(s);
@@ -72,7 +80,7 @@ public class FlexiblePortfolio extends AbstractPortfolio implements IFlexiblePor
   //<editor-fold desc="Helper methods">
 
   protected static void validateFlexibleStocksInput(List<Triplet<String, Date, BigDecimal>> stocks)
-      throws IllegalArgumentException {
+          throws IllegalArgumentException {
     if (stocks == null || stocks.size() == 0) {
       throw new IllegalArgumentException("No stocks provided!");
     }
@@ -89,26 +97,26 @@ public class FlexiblePortfolio extends AbstractPortfolio implements IFlexiblePor
   }
 
   static void validateIPODateAndDelistingDate(IStockDataSource source, Date date, String symbol)
-      throws IllegalArgumentException {
+          throws IllegalArgumentException {
     Date ipoDate = source.getIPODate(symbol);
     Date delistingDate = source.getDelistingDate(symbol);
 
     if (date.before(ipoDate)) {
       throw new IllegalArgumentException(
-          "The transaction date for stock symbol: " + symbol + " cannot be before it's IPO date!");
+              "The transaction date for stock symbol: " + symbol + " cannot be before it's IPO date!");
     }
 
     if (delistingDate != null && date.after(delistingDate)) {
       throw new IllegalArgumentException(
-          "The transaction date for stock symbol: " + symbol
-              + " cannot be after it's delisting date!");
+              "The transaction date for stock symbol: " + symbol
+                      + " cannot be after it's delisting date!");
     }
   }
 
   private String generateChartTitle(Date startDate, Date endDate) {
     return "Performance of Portfolio " + this.getName() + " from "
-        + Utils.convertDateToDefaultStringFormat(startDate) + " to "
-        + Utils.convertDateToDefaultStringFormat(endDate);
+            + Utils.convertDateToDefaultStringFormat(startDate) + " to "
+            + Utils.convertDateToDefaultStringFormat(endDate);
   }
 
   //</editor-fold>
@@ -118,9 +126,9 @@ public class FlexiblePortfolio extends AbstractPortfolio implements IFlexiblePor
   @Override
   public List<IObservableFlexiblePortfolioStock> getStocks() {
     return this.stocks
-        .stream()
-        .map(s -> (IObservableFlexiblePortfolioStock) s)
-        .collect(Collectors.toList());
+            .stream()
+            .map(s -> (IObservableFlexiblePortfolioStock) s)
+            .collect(Collectors.toList());
   }
 
   @Override
@@ -148,8 +156,8 @@ public class FlexiblePortfolio extends AbstractPortfolio implements IFlexiblePor
   }
 
   private IFlexiblePortfolio addTransaction(IStockDataSource source,
-      List<Triplet<String, Date, BigDecimal>> stocks, BigDecimal commissionFees, boolean isBuy)
-      throws IllegalArgumentException, StockDataSourceException, IllegalStateException {
+                                            List<Triplet<String, Date, BigDecimal>> stocks, BigDecimal commissionFees, boolean isBuy)
+          throws IllegalArgumentException, StockDataSourceException, IllegalStateException {
     validateFlexibleStocksInput(stocks);
 
     for (Triplet<String, Date, BigDecimal> s : stocks) {
@@ -171,9 +179,9 @@ public class FlexiblePortfolio extends AbstractPortfolio implements IFlexiblePor
         for (IFlexiblePortfolioStock currentStock : this.stocks) {
           if (currentStock.getSymbol().equals(newStockSymbol)) {
             var purchasePrice =
-                source.getStockPrice(currentStock.getSymbol(), newStockDate, false);
+                    source.getStockPrice(currentStock.getSymbol(), newStockDate, false);
             currentStock.addTransaction(newStockDate, newStockVolume, purchasePrice,
-                commissionFees);
+                    commissionFees);
 
             // no need to go through rest of the list of
             // stocks as we found what we were looking for
@@ -185,11 +193,11 @@ public class FlexiblePortfolio extends AbstractPortfolio implements IFlexiblePor
           // add the stock to the portfolio as the stock is new in the portfolio
           IStock sourceStock = source.getStock(newStockSymbol);
           var purchasePrice =
-              source.getStockPrice(sourceStock.getSymbol(), newStockDate, false);
+                  source.getStockPrice(sourceStock.getSymbol(), newStockDate, false);
           this.stocks.add(
-              new FlexiblePortfolioStock(sourceStock.getSymbol(), sourceStock.getName(),
-                  sourceStock.getExchange(), newStockVolume, newStockDate, purchasePrice,
-                  commissionFees));
+                  new FlexiblePortfolioStock(sourceStock.getSymbol(), sourceStock.getName(),
+                          sourceStock.getExchange(), newStockVolume, newStockDate, purchasePrice,
+                          commissionFees));
           this.stockSymbolsSet.add(newStockSymbol);
         } else {
           throw new IllegalArgumentException("The requested stock doesn't exist in the portfolio!");
@@ -202,21 +210,21 @@ public class FlexiblePortfolio extends AbstractPortfolio implements IFlexiblePor
 
   @Override
   public IFlexiblePortfolio buyStocks(IStockDataSource source,
-      List<Triplet<String, Date, BigDecimal>> stocks, BigDecimal commissionFees)
-      throws IllegalArgumentException, StockDataSourceException, IllegalStateException {
+                                      List<Triplet<String, Date, BigDecimal>> stocks, BigDecimal commissionFees)
+          throws IllegalArgumentException, StockDataSourceException, IllegalStateException {
     return this.addTransaction(source, stocks, commissionFees, true);
   }
 
   @Override
   public IFlexiblePortfolio sellStocks(IStockDataSource source,
-      List<Triplet<String, Date, BigDecimal>> stocks, BigDecimal commissionFees)
-      throws IllegalArgumentException, StockDataSourceException, IllegalStateException {
+                                       List<Triplet<String, Date, BigDecimal>> stocks, BigDecimal commissionFees)
+          throws IllegalArgumentException, StockDataSourceException, IllegalStateException {
     return this.addTransaction(source, stocks, commissionFees, false);
   }
 
   @Override
   public BigDecimal getCostBasis(IStockDataSource source, Date date)
-      throws StockDataSourceException, IllegalArgumentException {
+          throws StockDataSourceException, IllegalArgumentException {
     BigDecimal result = new BigDecimal(0);
 
     for (IObservableFlexiblePortfolioStock stock : this.getStocks()) {
@@ -230,7 +238,7 @@ public class FlexiblePortfolio extends AbstractPortfolio implements IFlexiblePor
 
   @Override
   public Pair<BigDecimal, List<IPortfolioStockValue>> getValue(IStockDataSource source,
-      Date date) throws IllegalArgumentException, StockDataSourceException {
+                                                               Date date) throws IllegalArgumentException, StockDataSourceException {
     Utils.validateFutureDate(date);
 
     BigDecimal result = new BigDecimal(0);
@@ -240,7 +248,7 @@ public class FlexiblePortfolio extends AbstractPortfolio implements IFlexiblePor
       Pair<BigDecimal, BigDecimal> stockValue = stock.getValueOnDate(source, date);
 
       stockValues.add(new PortfolioStockValue(stock.getSymbol(), stock.getName(),
-          stock.getExchange(), stockValue.getO1(), stockValue.getO2()));
+              stock.getExchange(), stockValue.getO1(), stockValue.getO2()));
       result = result.add(stockValue.getO2());
     }
 
@@ -249,7 +257,7 @@ public class FlexiblePortfolio extends AbstractPortfolio implements IFlexiblePor
 
   @Override
   public IChart getPerformanceChart(IStockDataSource source, IChartService chartService,
-      Date startDate, Date endDate) throws IllegalArgumentException, StockDataSourceException {
+                                    Date startDate, Date endDate) throws IllegalArgumentException, StockDataSourceException {
     Utils.validateFutureDate(startDate);
     Utils.validateStartAndEndDate(startDate, endDate);
 
@@ -265,22 +273,22 @@ public class FlexiblePortfolio extends AbstractPortfolio implements IFlexiblePor
       } else {
         Date today = Utils.getTodayDate();
         value = this.getValue(source, new Date(today.getYear(), today.getMonth(), today.getDay()))
-            .getO1().intValue();
+                .getO1().intValue();
         chartData.add(new Pair<>(date, value));
         break;
       }
     }
 
     return chartService.generateChart(intervals.getO1(),
-        this.generateChartTitle(startDate, endDate), chartData);
+            this.generateChartTitle(startDate, endDate), chartData);
   }
 
   @Override
   public IFlexiblePortfolio addDollarCostInvestment(IStockDataSource source, Date date,
-      BigDecimal amount, BigDecimal commissionFees,
-      List<Pair<String, BigDecimal>> stocksWithPercentage, boolean isRecurring, Date endDate,
-      eRecurringIntervalType intervalType, Integer intervalDelta)
-      throws IllegalArgumentException, StockDataSourceException {
+                                                    BigDecimal amount, BigDecimal commissionFees,
+                                                    List<Pair<String, BigDecimal>> stocksWithPercentage, boolean isRecurring, Date endDate,
+                                                    eRecurringIntervalType intervalType, Integer intervalDelta)
+          throws IllegalArgumentException, StockDataSourceException {
 
     //<editor-fold desc="validations">
 
@@ -289,7 +297,7 @@ public class FlexiblePortfolio extends AbstractPortfolio implements IFlexiblePor
 
     // creation and validation of recurring event
     IRecurringEvent recurringEvent
-        = isRecurring ? new RecurringEvent(endDate, intervalType, intervalDelta) : null;
+            = isRecurring ? new RecurringEvent(endDate, intervalType, intervalDelta) : null;
 
     if (isRecurring && endDate != null) {
       Utils.validateStartAndEndDate(date, endDate);
@@ -332,7 +340,7 @@ public class FlexiblePortfolio extends AbstractPortfolio implements IFlexiblePor
       var stockAmount = amount.multiply(swp.getO2()).multiply(new BigDecimal("0.01"));
 
       IDollarCostInvestment dci = new DollarCostInvestment(date, stockAmount, commissionFees,
-          recurringEvent);
+              recurringEvent);
 
       if (this.stockSymbolsSet.contains(newStockSymbol)) {
         for (IFlexiblePortfolioStock currentStock : this.stocks) {
@@ -348,8 +356,8 @@ public class FlexiblePortfolio extends AbstractPortfolio implements IFlexiblePor
         // add the stock to the portfolio as the stock is new in the portfolio
         IStock sourceStock = source.getStock(newStockSymbol);
         this.stocks.add(
-            new FlexiblePortfolioStock(source, sourceStock.getSymbol(), sourceStock.getName(),
-                sourceStock.getExchange(), dci));
+                new FlexiblePortfolioStock(source, sourceStock.getSymbol(), sourceStock.getName(),
+                        sourceStock.getExchange(), dci));
         this.stockSymbolsSet.add(newStockSymbol);
       }
     }
@@ -358,43 +366,134 @@ public class FlexiblePortfolio extends AbstractPortfolio implements IFlexiblePor
   }
 
   @Override
-  public List<Pair<String, IDollarCostInvestment>> getDollarCostInvestments() {
-    List<Pair<String, IDollarCostInvestment>> result = new ArrayList<>();
+  public IFlexiblePortfolio addRebalance(IStockDataSource source, Date date,
+                                         BigDecimal totalValue,
+                                         List<Pair<String, BigDecimal>> stocksWithPercentage)
+          throws IllegalArgumentException, StockDataSourceException {
 
-    for (var s : this.stocks) {
-      List<Pair<String, IDollarCostInvestment>> dollarCostInvestments = s.getDollarCostInvestments()
-          .stream()
-          .map(dci -> new Pair<>(s.getSymbol(), dci))
-          .collect(Collectors.toList());
+    List<IPortfolioStockValue> stocksValues = getValue(source, date).getO2();
+    // makes sure total percentages add up to 100
+    var stocksPercentageTotal = new BigDecimal(0);
+    Set<String> stocksList = new HashSet<>();
 
-      result.addAll(dollarCostInvestments);
+    for (var swp : stocksWithPercentage) {
+      String stockSymbol = swp.getO1();
+      if (swp.getO2().compareTo(new BigDecimal(0)) <= 0) {
+        throw new IllegalArgumentException("Percentages have to be positive!");
+      }
+      stocksList.add(swp.getO1());
+
+      stocksPercentageTotal = stocksPercentageTotal.add(swp.getO2());
     }
-    return result;
-  }
+    if (!stocksPercentageTotal.equals(new BigDecimal(100))) {
+      throw new IllegalArgumentException("The percentages of stocks should total up to 100!");
+    }
 
-  //</editor-fold>
+    for (Pair<String, BigDecimal> swp : stocksWithPercentage) {
 
-  //<editor-fold desc="CSV converter methods">
+      BigDecimal currentValue = new BigDecimal(0);
 
-  @Override
-  public List<String> toCsvRows() {
-    List<String> result = new ArrayList<>();
+      String newStockSymbol = swp.getO1();
+      BigDecimal percentOfTotal = swp.getO2();
+      for (IPortfolioStock s : stocksValues) {
+        if (s.getSymbol().equals(newStockSymbol)) {
+          currentValue = ((IPortfolioStockValue)s).getValue();
+        }
+      }
+      BigDecimal currentPrice =
+              source.getStockPrice(swp.getO1(), date, false);
+      BigDecimal amountNeeded = totalValue.multiply(
+              percentOfTotal.multiply(new BigDecimal(0.01)));
+      BigDecimal amountToBuy = amountNeeded.subtract(currentValue);
+      BigDecimal sharesToBuy = new BigDecimal(0);
+      BigDecimal sharesToSell = new BigDecimal(0);
+      if (amountToBuy.signum() > 0) {
+        sharesToBuy = amountToBuy.divide(currentPrice, 8, RoundingMode.HALF_DOWN);
+      } else if (amountToBuy.signum() < 0) {
+        sharesToSell = amountToBuy.abs().divide(currentPrice, 8, RoundingMode.HALF_DOWN);
+      }
 
-    for (IFlexiblePortfolioStock stock : this.stocks) {
-      for (var stockTransaction : stock.getTransactions()) {
-        result.add(this.name + ","
-            + stock.getSymbol() + ","
-            + stock.getName() + ","
-            + stock.getExchange() + ","
-            + Utils.convertDateToDefaultStringFormat(stockTransaction.getO1()) + ","
-            // transaction Date
-            + stockTransaction.getO2().getO1() + "," // transaction Volume
-            + stockTransaction.getO2().getO2() + "," // transaction Stock Purchase Price
-            + stockTransaction.getO2().getO3() + "\n"); // transaction Commission Fees
+      // find stock symbol in set
+      for (IFlexiblePortfolioStock currentStock : this.stocks) {
+        if (currentStock.getSymbol().equals(newStockSymbol)) {
+          if (!sharesToSell.equals(new BigDecimal(0))) {
+            Triplet<String, Date, BigDecimal> t = new Triplet(newStockSymbol, date, sharesToSell);
+            List<Triplet<String, Date, BigDecimal>> list = new ArrayList();
+            list.add(t);
+            sellStocks(source, list, new BigDecimal(0));
+            list.clear();
+          } else if (!sharesToBuy.equals(new BigDecimal(0))) {
+            Triplet<String, Date, BigDecimal> t = new Triplet(newStockSymbol, date, sharesToBuy);
+            List<Triplet<String, Date, BigDecimal>> list = new ArrayList();
+            list.add(t);
+            buyStocks(source, list, new BigDecimal(0));
+            list.clear();
+          }
+          IRebalance r = new Rebalance(date, amountNeeded, percentOfTotal);
+          rebalanceMap.put(newStockSymbol, r);
+          //currentStock.addStockRebalance(source, r);
+        }
       }
     }
+
+      return this;
+    }
+
+    @Override
+    public List<Pair<String, IDollarCostInvestment>> getDollarCostInvestments () {
+      List<Pair<String, IDollarCostInvestment>> result = new ArrayList<>();
+
+      for (var s : this.stocks) {
+        List<Pair<String, IDollarCostInvestment>> dollarCostInvestments = s.getDollarCostInvestments()
+                .stream()
+                .map(dci -> new Pair<>(s.getSymbol(), dci))
+                .collect(Collectors.toList());
+
+        result.addAll(dollarCostInvestments);
+      }
+      return result;
+    }
+
+  @Override
+  public List<Pair<String, IRebalance>> getRebalanceData () {
+    List<Pair<String, IRebalance>> result = new ArrayList<>();
+
+    for (var s : this.stocks) {
+      Pair<String, IRebalance> p = new Pair<>(s.getSymbol(), rebalanceMap.get(s.getSymbol()));
+      /**
+      List<Pair<String, IRebalance>> rebalance = s.getRebalance(rebalanceMap)
+              .stream()
+              .map(r -> new Pair<>(s.getSymbol(), r))
+              .collect(Collectors.toList());
+*/
+      result.add(p);
+    }
     return result;
   }
 
-  //</editor-fold>
-}
+    //</editor-fold>
+
+    //<editor-fold desc="CSV converter methods">
+
+    @Override
+    public List<String> toCsvRows () {
+      List<String> result = new ArrayList<>();
+
+      for (IFlexiblePortfolioStock stock : this.stocks) {
+        for (var stockTransaction : stock.getTransactions()) {
+          result.add(this.name + ","
+                  + stock.getSymbol() + ","
+                  + stock.getName() + ","
+                  + stock.getExchange() + ","
+                  + Utils.convertDateToDefaultStringFormat(stockTransaction.getO1()) + ","
+                  // transaction Date
+                  + stockTransaction.getO2().getO1() + "," // transaction Volume
+                  + stockTransaction.getO2().getO2() + "," // transaction Stock Purchase Price
+                  + stockTransaction.getO2().getO3() + "\n"); // transaction Commission Fees
+        }
+      }
+      return result;
+    }
+
+    //</editor-fold>
+  }
