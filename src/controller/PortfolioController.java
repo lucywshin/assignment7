@@ -3,6 +3,7 @@ package controller;
 import common.Utils;
 import common.pair.Pair;
 import common.triplet.Triplet;
+
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -13,6 +14,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 import java.util.function.Function;
+
 import jdk.jshell.spi.ExecutionControl.NotImplementedException;
 import model.IPortfolioModel;
 import model.chart.IChart;
@@ -87,7 +89,11 @@ public class PortfolioController implements IPortfolioController {
     FLEXIBLE_PERFORMANCE_PORTFOLIO_PROMPT,
     FLEXIBLE_PERFORMANCE_START_DATE_PROMPT,
     FLEXIBLE_PERFORMANCE_END_DATE_PROMPT,
-    FLEXIBLE_PERFORMANCE_RESULT
+    FLEXIBLE_PERFORMANCE_RESULT,
+    FLEXIBLE_REBALANCE_PROMPT,
+    FLEXIBLE_REBALANCE_DATE_PROMPT,
+    FLEXIBLE_REBALANCE_WEIGHT_PROMPT,
+    FLEXIBLE_REBALANCE_RESULT
   }
 
   //</editor-fold>
@@ -102,7 +108,7 @@ public class PortfolioController implements IPortfolioController {
     /**
      * Displays the page.
      */
-    void displayPage() throws NotImplementedException;
+    void displayPage() throws NotImplementedException, StockDataSourceException;
 
     /**
      * Gets the prompt for the page.
@@ -116,7 +122,7 @@ public class PortfolioController implements IPortfolioController {
      *
      * @param currentInput the current input to be processed.
      * @return a triplet with the next page, the input to be interpreted, and the error message for
-     *     the next page.
+     * the next page.
      */
     ePage processInputAndGetNextPage(String currentInput) throws NotImplementedException;
 
@@ -257,7 +263,7 @@ public class PortfolioController implements IPortfolioController {
      * @param currentPage          the current page.
      */
     PageState(String toInterpretInput, String errorMessage, boolean isApplicationRunning,
-        int portfolioId, Date date, ePage currentPage) {
+              int portfolioId, Date date, ePage currentPage) {
       this.toInterpretInput = toInterpretInput;
       this.errorMessage = errorMessage;
       this.isApplicationRunning = isApplicationRunning;
@@ -354,9 +360,9 @@ public class PortfolioController implements IPortfolioController {
      * @param pageState the current state of the page.
      */
     AbstractPage(IPortfolioModel model,
-        IPortfolioView view,
-        Appendable out,
-        IPageState pageState) {
+                 IPortfolioView view,
+                 Appendable out,
+                 IPageState pageState) {
       this.model = model;
       this.view = view;
       this.out = out;
@@ -444,10 +450,10 @@ public class PortfolioController implements IPortfolioController {
      * @param pageState the current state of the page.
      */
     HomePage(
-        IPortfolioModel model,
-        IPortfolioView view,
-        Appendable out,
-        IPageState pageState) {
+            IPortfolioModel model,
+            IPortfolioView view,
+            Appendable out,
+            IPageState pageState) {
       super(model, view, out, pageState);
     }
 
@@ -456,11 +462,11 @@ public class PortfolioController implements IPortfolioController {
       this.pageState.setToInterpretInput(null);
       List<String> prompts = getPrompts();
       this.processOutput(
-          this.view.displayHomePage(
-              this.model.getAllPortfolios(),
-              this.model.getAllFlexiblePortfolios(),
-              prompts,
-              this.pageState.getErrorMessage()));
+              this.view.displayHomePage(
+                      this.model.getAllPortfolios(),
+                      this.model.getAllFlexiblePortfolios(),
+                      prompts,
+                      this.pageState.getErrorMessage()));
     }
 
     @Override
@@ -484,6 +490,7 @@ public class PortfolioController implements IPortfolioController {
       prompts.add("(FCB) Request Cost Basis for a flexible portfolio.");
       prompts.add("(FP) Request Performance chart for a flexible portfolio.");
       prompts.add("(FCF) Change Commission Fees.");
+      prompts.add("(FR) Rebalance Portfolio.");
       prompts.add("");
 
       prompts.add("(X) Exit Application.");
@@ -500,21 +507,21 @@ public class PortfolioController implements IPortfolioController {
         case "C":
           if (this.model.getPortfolioCount() == 0) {
             this.pageState.setErrorMessage(
-                "State error: There are no portfolios in the application to fetch data for!");
+                    "State error: There are no portfolios in the application to fetch data for!");
             return ePage.HOMEPAGE;
           }
           return ePage.COMPOSITION_PORTFOLIO_PROMPT;
         case "V":
           if (this.model.getPortfolioCount() == 0) {
             this.pageState.setErrorMessage(
-                "State error: There are no portfolios in the application to fetch data for!");
+                    "State error: There are no portfolios in the application to fetch data for!");
             return ePage.HOMEPAGE;
           }
           return ePage.VALUE_PORTFOLIO_PROMPT;
         case "E":
           if (this.model.getPortfolioCount() == 0) {
             this.pageState.setErrorMessage(
-                "State error: There are no portfolios in the application to fetch data for!");
+                    "State error: There are no portfolios in the application to fetch data for!");
             return ePage.HOMEPAGE;
           }
           return ePage.EXPORT_PROMPT;
@@ -527,24 +534,24 @@ public class PortfolioController implements IPortfolioController {
         case "FC":
           if (this.model.getFlexiblePortfolioCount() == 0) {
             this.pageState.setErrorMessage(
-                "State error: There are no flexible portfolios in the application to "
-                    + "fetch data for!");
+                    "State error: There are no flexible portfolios in the application to "
+                            + "fetch data for!");
             return ePage.HOMEPAGE;
           }
           return ePage.FLEXIBLE_COMPOSITION_PORTFOLIO_PROMPT;
         case "FV":
           if (this.model.getFlexiblePortfolioCount() == 0) {
             this.pageState.setErrorMessage(
-                "State error: There are no flexible portfolios in the application to "
-                    + "fetch data for!");
+                    "State error: There are no flexible portfolios in the application to "
+                            + "fetch data for!");
             return ePage.HOMEPAGE;
           }
           return ePage.FLEXIBLE_VALUE_PORTFOLIO_PROMPT;
         case "FE":
           if (this.model.getFlexiblePortfolioCount() == 0) {
             this.pageState.setErrorMessage(
-                "State error: There are no flexible portfolios in the application to "
-                    + "fetch data for!");
+                    "State error: There are no flexible portfolios in the application to "
+                            + "fetch data for!");
             return ePage.HOMEPAGE;
           }
           return ePage.FLEXIBLE_EXPORT_PROMPT;
@@ -553,16 +560,16 @@ public class PortfolioController implements IPortfolioController {
         case "FB":
           if (this.model.getFlexiblePortfolioCount() == 0) {
             this.pageState.setErrorMessage(
-                "State error: There are no flexible portfolios in the application to "
-                    + "buy stocks for!");
+                    "State error: There are no flexible portfolios in the application to "
+                            + "buy stocks for!");
             return ePage.HOMEPAGE;
           }
           return ePage.FLEXIBLE_BUY_PORTFOLIO_PROMPT;
         case "FS":
           if (this.model.getFlexiblePortfolioCount() == 0) {
             this.pageState.setErrorMessage(
-                "State error: There are no flexible portfolios in the application to "
-                    + "sell stocks for!");
+                    "State error: There are no flexible portfolios in the application to "
+                            + "sell stocks for!");
             return ePage.HOMEPAGE;
           }
           return ePage.FLEXIBLE_SELL_PORTFOLIO_PROMPT;
@@ -570,8 +577,8 @@ public class PortfolioController implements IPortfolioController {
         case "FCB":
           if (this.model.getFlexiblePortfolioCount() == 0) {
             this.pageState.setErrorMessage(
-                "State error: There are no flexible portfolios in the application to "
-                    + "fetch cost basis for!");
+                    "State error: There are no flexible portfolios in the application to "
+                            + "fetch cost basis for!");
             return ePage.HOMEPAGE;
           }
           return ePage.FLEXIBLE_COST_BASIS_PORTFOLIO_PROMPT;
@@ -579,11 +586,20 @@ public class PortfolioController implements IPortfolioController {
         case "FP":
           if (this.model.getFlexiblePortfolioCount() == 0) {
             this.pageState.setErrorMessage(
-                "State error: There are no flexible portfolios in the application to "
-                    + "fetch performance chart for!");
+                    "State error: There are no flexible portfolios in the application to "
+                            + "fetch performance chart for!");
             return ePage.HOMEPAGE;
           }
           return ePage.FLEXIBLE_PERFORMANCE_PORTFOLIO_PROMPT;
+
+        case "FR":
+          if (this.model.getFlexiblePortfolioCount() == 0) {
+            this.pageState.setErrorMessage(
+                    "State error: There are no flexible portfolios in the application to "
+                            + "fetch performance chart for!");
+            return ePage.HOMEPAGE;
+          }
+          return ePage.FLEXIBLE_REBALANCE_PROMPT;
 
         case "FCF":
           return ePage.FLEXIBLE_COMMISSION_FEE_PROMPT;
@@ -613,10 +629,10 @@ public class PortfolioController implements IPortfolioController {
      * @param pageState the current state of the page.
      */
     AddPortfolioNamePromptPage(
-        IPortfolioModel model,
-        IPortfolioView view,
-        Appendable out,
-        IPageState pageState) {
+            IPortfolioModel model,
+            IPortfolioView view,
+            Appendable out,
+            IPageState pageState) {
       super(model, view, out, pageState);
     }
 
@@ -625,9 +641,9 @@ public class PortfolioController implements IPortfolioController {
       this.pageState.setToInterpretInput(null);
       List<String> prompts = getPrompts();
       if (this.pageState.getCurrentPage() == ePage.ADD_PORTFOLIO_NAME_PROMPT ||
-          this.pageState.getCurrentPage() == ePage.FLEXIBLE_ADD_PORTFOLIO_NAME_PROMPT) {
+              this.pageState.getCurrentPage() == ePage.FLEXIBLE_ADD_PORTFOLIO_NAME_PROMPT) {
         this.processOutput(
-            this.view.displayAddPortfolioNamePromptPage(prompts, this.pageState.getErrorMessage()));
+                this.view.displayAddPortfolioNamePromptPage(prompts, this.pageState.getErrorMessage()));
       } else {
         throw new NotImplementedException("Action for page is not implemented!");
       }
@@ -691,10 +707,10 @@ public class PortfolioController implements IPortfolioController {
      * @param pageState the current state of the page.
      */
     AddPortfolioStocksPromptPage(
-        IPortfolioModel model,
-        IPortfolioView view,
-        Appendable out,
-        IPageState pageState) {
+            IPortfolioModel model,
+            IPortfolioView view,
+            Appendable out,
+            IPageState pageState) {
       super(model, view, out, pageState);
     }
 
@@ -713,7 +729,7 @@ public class PortfolioController implements IPortfolioController {
 
           try {
             this.model.addStocksToPortfolioBuilder(
-                List.of(new Pair<>(rawStock.getO1(), new BigDecimal(rawStock.getO2()))));
+                    List.of(new Pair<>(rawStock.getO1(), new BigDecimal(rawStock.getO2()))));
           } catch (IllegalArgumentException e) {
             this.pageState.setErrorMessage(e.getMessage());
           }
@@ -724,11 +740,11 @@ public class PortfolioController implements IPortfolioController {
 
       List<String> prompts = getPrompts();
       this.processOutput(
-          this.view.displayAddPortfolioStocksPromptPage(
-              this.model.getPortfolioBuilderName(),
-              this.model.getPortfolioBuilderStocks(),
-              prompts,
-              this.pageState.getErrorMessage()));
+              this.view.displayAddPortfolioStocksPromptPage(
+                      this.model.getPortfolioBuilderName(),
+                      this.model.getPortfolioBuilderStocks(),
+                      prompts,
+                      this.pageState.getErrorMessage()));
     }
 
     @Override
@@ -744,8 +760,8 @@ public class PortfolioController implements IPortfolioController {
     public List<String> getPrompts() {
       List<String> prompts = new ArrayList<>();
       prompts.add("Enter the stocks for the portfolio you would like to create "
-          + "(enter in <Stock1 Symbol>,<Stock1 Volume>;<Stock2 Symbol>,<Stock2 Volume>;... "
-          + "format).");
+              + "(enter in <Stock1 Symbol>,<Stock1 Volume>;<Stock2 Symbol>,<Stock2 Volume>;... "
+              + "format).");
       prompts.add("(D) done adding stocks.");
       prompts.add("(H) Go back to Home page.");
 
@@ -789,10 +805,10 @@ public class PortfolioController implements IPortfolioController {
      * @param pageState the current state of the page.
      */
     CommissionFeePromptPage(
-        IPortfolioModel model,
-        IPortfolioView view,
-        Appendable out,
-        IPageState pageState) {
+            IPortfolioModel model,
+            IPortfolioView view,
+            Appendable out,
+            IPageState pageState) {
       super(model, view, out, pageState);
     }
 
@@ -802,8 +818,8 @@ public class PortfolioController implements IPortfolioController {
       if (this.pageState.getCurrentPage() == ePage.FLEXIBLE_COMMISSION_FEE_PROMPT) {
         List<String> prompts = getPrompts();
         this.processOutput(
-            this.view.displayFlexiblePortfolioCommissionFeePromptPage(commissionFee,
-                prompts, this.pageState.getErrorMessage()));
+                this.view.displayFlexiblePortfolioCommissionFeePromptPage(commissionFee,
+                        prompts, this.pageState.getErrorMessage()));
       } else {
         throw new NotImplementedException("Action for page is not implemented!");
       }
@@ -847,10 +863,10 @@ public class PortfolioController implements IPortfolioController {
      * @param pageState the current state of the page.
      */
     CompositionPortfolioPromptPage(
-        IPortfolioModel model,
-        IPortfolioView view,
-        Appendable out,
-        IPageState pageState) {
+            IPortfolioModel model,
+            IPortfolioView view,
+            Appendable out,
+            IPageState pageState) {
       super(model, view, out, pageState);
     }
 
@@ -859,11 +875,11 @@ public class PortfolioController implements IPortfolioController {
       this.pageState.setToInterpretInput(null);
       List<String> prompts = getPrompts();
       this.processOutput(
-          this.view.displayGenericPortfolioPromptPage(
-              "Composition",
-              this.model.getAllPortfolios(),
-              prompts,
-              this.pageState.getErrorMessage()));
+              this.view.displayGenericPortfolioPromptPage(
+                      "Composition",
+                      this.model.getAllPortfolios(),
+                      prompts,
+                      this.pageState.getErrorMessage()));
     }
 
     @Override
@@ -904,10 +920,10 @@ public class PortfolioController implements IPortfolioController {
      * @param pageState the current state of the page.
      */
     CompositionResultPage(
-        IPortfolioModel model,
-        IPortfolioView view,
-        Appendable out,
-        IPageState pageState) {
+            IPortfolioModel model,
+            IPortfolioView view,
+            Appendable out,
+            IPageState pageState) {
       super(model, view, out, pageState);
     }
 
@@ -918,17 +934,17 @@ public class PortfolioController implements IPortfolioController {
         this.pageState.setToInterpretInput(null);
         List<String> prompts = getPrompts();
         this.processOutput(
-            this.view.displayCompositionResultPage(
-                this.model.getPortfolioComposition(id - 1),
-                prompts,
-                this.pageState.getErrorMessage()));
+                this.view.displayCompositionResultPage(
+                        this.model.getPortfolioComposition(id - 1),
+                        prompts,
+                        this.pageState.getErrorMessage()));
       } else if (this.pageState.getCurrentPage() == ePage.FLEXIBLE_COMPOSITION_RESULT) {
         Date date = Utils.convertStringToDate(this.toInterpretInput);
         this.pageState.setToInterpretInput(null);
         List<String> prompts = getPrompts();
 
         Pair<String, List<Pair<String, BigDecimal>>> compositionList =
-            this.model.getFlexiblePortfolioComposition(this.pageState.getPortfolioId(), date);
+                this.model.getFlexiblePortfolioComposition(this.pageState.getPortfolioId(), date);
 
         List<String> compositionStocks = new ArrayList<>();
         for (var compositionStock : compositionList.getO2()) {
@@ -936,12 +952,12 @@ public class PortfolioController implements IPortfolioController {
         }
 
         Pair<String, List<String>> compositionResult = new Pair<>(compositionList.getO1(),
-            compositionStocks);
+                compositionStocks);
 
         this.processOutput(
-            this.view.displayCompositionResultPage(compositionResult,
-                prompts,
-                this.pageState.getErrorMessage()));
+                this.view.displayCompositionResultPage(compositionResult,
+                        prompts,
+                        this.pageState.getErrorMessage()));
       } else {
         throw new NotImplementedException("Action for page is not implemented!");
       }
@@ -975,10 +991,10 @@ public class PortfolioController implements IPortfolioController {
      * @param pageState the current state of the page.
      */
     DatePromptPage(
-        IPortfolioModel model,
-        IPortfolioView view,
-        Appendable out,
-        IPageState pageState) {
+            IPortfolioModel model,
+            IPortfolioView view,
+            Appendable out,
+            IPageState pageState) {
       super(model, view, out, pageState);
     }
 
@@ -993,10 +1009,10 @@ public class PortfolioController implements IPortfolioController {
         this.pageState.setToInterpretInput(null);
         List<String> prompts = getPrompts();
         this.processOutput(
-            this.view.displayGenericDatePromptPage(
-                "Flexible Portfolio Composition Date Prompt",
-                prompts,
-                this.pageState.getErrorMessage()));
+                this.view.displayGenericDatePromptPage(
+                        "Flexible Portfolio Composition Date Prompt",
+                        prompts,
+                        this.pageState.getErrorMessage()));
 
       } else if (this.pageState.getCurrentPage() == ePage.VALUE_DATE_PROMPT) {
         if (Utils.isValidNumberInput(this.toInterpretInput)) {
@@ -1007,10 +1023,24 @@ public class PortfolioController implements IPortfolioController {
         this.pageState.setToInterpretInput(null);
         List<String> prompts = getPrompts();
         this.processOutput(
-            this.view.displayGenericDatePromptPage(
-                "Portfolio Value Date Prompt",
-                prompts,
-                this.pageState.getErrorMessage()));
+                this.view.displayGenericDatePromptPage(
+                        "Portfolio Value Date Prompt",
+                        prompts,
+                        this.pageState.getErrorMessage()));
+
+      } else if (this.pageState.getCurrentPage() == ePage.FLEXIBLE_REBALANCE_DATE_PROMPT) {
+        if (Utils.isValidNumberInput(this.toInterpretInput)) {
+          int id = Utils.convertStringToNumber(this.toInterpretInput);
+          this.pageState.setPortfolioId(id - 1);
+        }
+
+        this.pageState.setToInterpretInput(null);
+        List<String> prompts = getPrompts();
+        this.processOutput(
+                this.view.displayGenericDatePromptPage(
+                        "Portfolio Rebalance Date Prompt",
+                        prompts,
+                        this.pageState.getErrorMessage()));
 
       } else if (this.pageState.getCurrentPage() == ePage.FLEXIBLE_VALUE_DATE_PROMPT) {
         if (Utils.isValidNumberInput(this.toInterpretInput)) {
@@ -1021,10 +1051,24 @@ public class PortfolioController implements IPortfolioController {
         this.pageState.setToInterpretInput(null);
         List<String> prompts = getPrompts();
         this.processOutput(
-            this.view.displayGenericDatePromptPage(
-                "Flexible Portfolio Value Date Prompt",
-                prompts,
-                this.pageState.getErrorMessage()));
+                this.view.displayGenericDatePromptPage(
+                        "Flexible Portfolio Value Date Prompt",
+                        prompts,
+                        this.pageState.getErrorMessage()));
+
+      } else if (this.pageState.getCurrentPage() == ePage.FLEXIBLE_REBALANCE_DATE_PROMPT) {
+        if (Utils.isValidNumberInput(this.toInterpretInput)) {
+          int id = Utils.convertStringToNumber(this.toInterpretInput);
+          this.pageState.setPortfolioId(id - 1);
+        }
+
+        this.pageState.setToInterpretInput(null);
+        List<String> prompts = getPrompts();
+        this.processOutput(
+                this.view.displayGenericDatePromptPage(
+                        "Flexible Portfolio Rebalance Date Prompt",
+                        prompts,
+                        this.pageState.getErrorMessage()));
 
       } else if (this.pageState.getCurrentPage() == ePage.FLEXIBLE_COST_BASIS_DATE_PROMPT) {
         if (Utils.isValidNumberInput(this.toInterpretInput)) {
@@ -1035,10 +1079,10 @@ public class PortfolioController implements IPortfolioController {
         this.pageState.setToInterpretInput(null);
         List<String> prompts = getPrompts();
         this.processOutput(
-            this.view.displayGenericDatePromptPage(
-                "Flexible Portfolio Cost Basis Date Prompt",
-                prompts,
-                this.pageState.getErrorMessage()));
+                this.view.displayGenericDatePromptPage(
+                        "Flexible Portfolio Cost Basis Date Prompt",
+                        prompts,
+                        this.pageState.getErrorMessage()));
       } else if (this.pageState.getCurrentPage() == ePage.FLEXIBLE_PERFORMANCE_START_DATE_PROMPT) {
         if (Utils.isValidNumberInput(this.toInterpretInput)) {
           int id = Utils.convertStringToNumber(this.toInterpretInput);
@@ -1048,10 +1092,10 @@ public class PortfolioController implements IPortfolioController {
         this.pageState.setToInterpretInput(null);
         List<String> prompts = getPrompts();
         this.processOutput(
-            this.view.displayGenericDatePromptPage(
-                "Flexible Portfolio Performance Start Date Prompt",
-                prompts,
-                this.pageState.getErrorMessage()));
+                this.view.displayGenericDatePromptPage(
+                        "Flexible Portfolio Performance Start Date Prompt",
+                        prompts,
+                        this.pageState.getErrorMessage()));
       } else if (this.pageState.getCurrentPage() == ePage.FLEXIBLE_PERFORMANCE_END_DATE_PROMPT) {
         if (Utils.isValidDateInput(this.toInterpretInput)) {
           Date date = Utils.convertStringToDate(this.toInterpretInput);
@@ -1061,10 +1105,10 @@ public class PortfolioController implements IPortfolioController {
         this.pageState.setToInterpretInput(null);
         List<String> prompts = getPrompts();
         this.processOutput(
-            this.view.displayGenericDatePromptPage(
-                "Flexible Portfolio Performance End Date Prompt",
-                prompts,
-                this.pageState.getErrorMessage()));
+                this.view.displayGenericDatePromptPage(
+                        "Flexible Portfolio Performance End Date Prompt",
+                        prompts,
+                        this.pageState.getErrorMessage()));
       } else {
         throw new NotImplementedException("Action for page is not implemented!");
       }
@@ -1075,23 +1119,26 @@ public class PortfolioController implements IPortfolioController {
       List<String> prompts = new ArrayList<>();
       if (this.pageState.getCurrentPage() == ePage.FLEXIBLE_COMPOSITION_DATE_PROMPT) {
         prompts.add(
-            "Enter the date on which you would like to "
-                + "see the composition for the flexible portfolio (use mm-dd-yyyy format): ");
+                "Enter the date on which you would like to "
+                        + "see the composition for the flexible portfolio (use mm-dd-yyyy format): ");
       } else if (this.pageState.getCurrentPage() == ePage.VALUE_DATE_PROMPT
-          || this.pageState.getCurrentPage() == ePage.FLEXIBLE_VALUE_DATE_PROMPT) {
+              || this.pageState.getCurrentPage() == ePage.FLEXIBLE_VALUE_DATE_PROMPT) {
         prompts.add(
-            "Enter the date on which you would like to see the value for the portfolio "
-                + "(use mm-dd-yyyy format): ");
+                "Enter the date on which you would like to see the value for the portfolio "
+                        + "(use mm-dd-yyyy format): ");
       } else if (this.pageState.getCurrentPage() == ePage.FLEXIBLE_COST_BASIS_DATE_PROMPT) {
         prompts.add(
-            "Enter the date on which you would like to see the cost basis for the portfolio "
-                + "(use mm-dd-yyyy format): ");
+                "Enter the date on which you would like to see the cost basis for the portfolio "
+                        + "(use mm-dd-yyyy format): ");
       } else if (this.pageState.getCurrentPage() == ePage.FLEXIBLE_PERFORMANCE_START_DATE_PROMPT) {
         prompts.add(
-            "Enter the start date for the performance chart (use mm-dd-yyyy format): ");
+                "Enter the start date for the performance chart (use mm-dd-yyyy format): ");
       } else if (this.pageState.getCurrentPage() == ePage.FLEXIBLE_PERFORMANCE_END_DATE_PROMPT) {
         prompts.add(
-            "Enter the end date for the performance chart (use mm-dd-yyyy format): ");
+                "Enter the end date for the performance chart (use mm-dd-yyyy format): ");
+      } else if (this.pageState.getCurrentPage() == ePage.FLEXIBLE_REBALANCE_DATE_PROMPT) {
+        prompts.add(
+                "Enter the end date for rebalance (use mm-dd-yyyy format): ");
       } else {
         throw new NotImplementedException("Action for page is not implemented!");
       }
@@ -1133,6 +1180,14 @@ public class PortfolioController implements IPortfolioController {
           this.pageState.setErrorMessage("Input error: Invalid date entered!");
           return ePage.FLEXIBLE_VALUE_DATE_PROMPT;
         }
+      } else if (this.pageState.getCurrentPage() == ePage.FLEXIBLE_REBALANCE_DATE_PROMPT) {
+        if (Utils.isValidDateInput(currentInput)) {
+          this.pageState.setToInterpretInput(currentInput);
+          return ePage.FLEXIBLE_REBALANCE_WEIGHT_PROMPT;
+        } else {
+          this.pageState.setErrorMessage("Input error: Invalid date entered!");
+          return ePage.FLEXIBLE_VALUE_DATE_PROMPT;
+        }
       } else if (this.pageState.getCurrentPage() == ePage.FLEXIBLE_COST_BASIS_DATE_PROMPT) {
         if (Utils.isValidDateInput(currentInput)) {
           this.pageState.setToInterpretInput(currentInput);
@@ -1151,7 +1206,7 @@ public class PortfolioController implements IPortfolioController {
         }
       } else if (this.pageState.getCurrentPage() == ePage.FLEXIBLE_PERFORMANCE_END_DATE_PROMPT) {
         if (Utils.isValidDateInput(currentInput)
-            && Utils.convertStringToDate(currentInput).after(this.pageState.getDate())) {
+                && Utils.convertStringToDate(currentInput).after(this.pageState.getDate())) {
           this.pageState.setToInterpretInput(currentInput);
           return ePage.FLEXIBLE_PERFORMANCE_RESULT;
         } else {
@@ -1178,10 +1233,10 @@ public class PortfolioController implements IPortfolioController {
      * @param pageState the current state of the page.
      */
     CostBasisResultPage(
-        IPortfolioModel model,
-        IPortfolioView view,
-        Appendable out,
-        IPageState pageState) {
+            IPortfolioModel model,
+            IPortfolioView view,
+            Appendable out,
+            IPageState pageState) {
       super(model, view, out, pageState);
     }
 
@@ -1201,8 +1256,8 @@ public class PortfolioController implements IPortfolioController {
 
       List<String> prompts = getPrompts();
       this.processOutput(
-          this.view.displayFlexiblePortfolioCostBasisPage(pName, pCostBasis, prompts,
-              this.pageState.getErrorMessage()));
+              this.view.displayFlexiblePortfolioCostBasisPage(pName, pCostBasis, prompts,
+                      this.pageState.getErrorMessage()));
     }
 
     @Override
@@ -1220,6 +1275,9 @@ public class PortfolioController implements IPortfolioController {
     }
   }
 
+  private boolean nextPage = false;
+  private Date date = null;
+
   /**
    * The flexible portfolio stocks prompt page.
    */
@@ -1234,36 +1292,63 @@ public class PortfolioController implements IPortfolioController {
      * @param pageState the current state of the page.
      */
     FlexiblePortfolioStocksPromptPage(
-        IPortfolioModel model,
-        IPortfolioView view,
-        Appendable out,
-        IPageState pageState) {
+            IPortfolioModel model,
+            IPortfolioView view,
+            Appendable out,
+            IPageState pageState) {
       super(model, view, out, pageState);
     }
 
     @Override
-    public void displayPage() throws NotImplementedException {
-      if (Utils.isValidNumberInput(this.toInterpretInput)) {
-        int id = Utils.convertStringToNumber(this.toInterpretInput);
-        this.pageState.setPortfolioId(id - 1);
-      } else if (Utils.isValidFlexibleStockInputFormat(this.toInterpretInput)) {
-        List<Triplet<String, Date, BigDecimal>> stocks = Utils.convertStringToFlexibleStocksFormat(
-            this.toInterpretInput);
-        try {
-          if (this.pageState.getPortfolioId() == -1) {
-            this.pageState.setErrorMessage(
-                "Input error: Reached Buy/Sell operation with Invalid Portfolio Id!");
-          } else if (this.pageState.getCurrentPage() == ePage.FLEXIBLE_BUY_STOCKS_PROMPT) {
-            this.model.buyStocksForFlexiblePortfolio(this.pageState.getPortfolioId(), stocks,
-                commissionFee);
-          } else if (this.pageState.getCurrentPage() == ePage.FLEXIBLE_SELL_STOCKS_PROMPT) {
-            this.model.sellStocksForFlexiblePortfolio(this.pageState.getPortfolioId(), stocks,
-                commissionFee);
-          } else {
-            throw new NotImplementedException("Action for page is not implemented!");
+    public void displayPage() throws NotImplementedException, StockDataSourceException {
+      if (this.pageState.getCurrentPage() == ePage.FLEXIBLE_REBALANCE_WEIGHT_PROMPT) {
+        if (nextPage) {
+          List<Pair<String, BigDecimal>> stocksWithWeights = Utils.convertStringToListFormat
+                  (this.toInterpretInput);
+          this.model.addRebalance(this.pageState.getPortfolioId(), date, stocksWithWeights);
+          this.processOutput("Success\n Enter H to return to home\n");
+          date = null;
+          nextPage = false;
+        } else {
+          if (Utils.isValidDateInput(this.toInterpretInput)) {
+            date = Utils.convertStringToDate(this.toInterpretInput);
+            this.pageState.setToInterpretInput(null);
+            List<String> prompts = getPrompts();
+            IFlexiblePortfolio p = this.model.getFlexiblePortfolio(this.pageState.getPortfolioId());
+            this.processOutput(
+                    this.view.displayFlexiblePortfolioStocksPromptPage(
+                            p.getName(),
+                            "rebalance",
+                            p.getStocks(),
+                            prompts,
+                            this.pageState.getErrorMessage()));
+            nextPage = true;
           }
-        } catch (StockDataSourceException | IllegalArgumentException | IllegalStateException e) {
-          this.pageState.setErrorMessage(e.getMessage());
+        }
+      } else {
+        if (Utils.isValidNumberInput(this.toInterpretInput)) {
+          int id = Utils.convertStringToNumber(this.toInterpretInput);
+          this.pageState.setPortfolioId(id - 1);
+        } else if (Utils.isValidFlexibleStockInputFormat(this.toInterpretInput)) {
+          List<Triplet<String, Date, BigDecimal>> stocks = Utils.convertStringToFlexibleStocksFormat(
+                  this.toInterpretInput);
+          try {
+            if (this.pageState.getPortfolioId() == -1) {
+              this.pageState.setErrorMessage(
+                      "Input error: Reached Buy/Sell operation with Invalid Portfolio Id!");
+            } else if (this.pageState.getCurrentPage() == ePage.FLEXIBLE_BUY_STOCKS_PROMPT) {
+              this.model.buyStocksForFlexiblePortfolio(this.pageState.getPortfolioId(), stocks,
+                      commissionFee);
+            } else if (this.pageState.getCurrentPage() == ePage.FLEXIBLE_SELL_STOCKS_PROMPT) {
+              this.model.sellStocksForFlexiblePortfolio(this.pageState.getPortfolioId(), stocks,
+                      commissionFee);
+
+            } else {
+              throw new NotImplementedException("Action for page is not implemented!");
+            }
+          } catch (StockDataSourceException | IllegalArgumentException | IllegalStateException e) {
+            this.pageState.setErrorMessage(e.getMessage());
+          }
         }
       }
 
@@ -1273,23 +1358,21 @@ public class PortfolioController implements IPortfolioController {
       if (this.pageState.getCurrentPage() == ePage.FLEXIBLE_BUY_STOCKS_PROMPT) {
         IFlexiblePortfolio p = this.model.getFlexiblePortfolio(this.pageState.getPortfolioId());
         this.processOutput(
-            this.view.displayFlexiblePortfolioStocksPromptPage(
-                p.getName(),
-                "buy",
-                p.getStocks(),
-                prompts,
-                this.pageState.getErrorMessage()));
+                this.view.displayFlexiblePortfolioStocksPromptPage(
+                        p.getName(),
+                        "buy",
+                        p.getStocks(),
+                        prompts,
+                        this.pageState.getErrorMessage()));
       } else if (this.pageState.getCurrentPage() == ePage.FLEXIBLE_SELL_STOCKS_PROMPT) {
         IFlexiblePortfolio p = this.model.getFlexiblePortfolio(this.pageState.getPortfolioId());
         this.processOutput(
-            this.view.displayFlexiblePortfolioStocksPromptPage(
-                p.getName(),
-                "sell",
-                p.getStocks(),
-                prompts,
-                this.pageState.getErrorMessage()));
-      } else {
-        throw new NotImplementedException("Action for page is not implemented!");
+                this.view.displayFlexiblePortfolioStocksPromptPage(
+                        p.getName(),
+                        "sell",
+                        p.getStocks(),
+                        prompts,
+                        this.pageState.getErrorMessage()));
       }
     }
 
@@ -1299,17 +1382,24 @@ public class PortfolioController implements IPortfolioController {
 
       if (this.pageState.getCurrentPage() == ePage.FLEXIBLE_BUY_STOCKS_PROMPT) {
         prompts.add("Enter the stocks for the portfolio you would like to create \n"
-            + "(enter in <Stock1 Symbol>,<Stock1 Volume>,<Stock1 Purchase Date>;"
-            + "<Stock2 Symbol>,<Stock2 Volume>,<Stock2 Purchase Date>;... format).");
+                + "(enter in <Stock1 Symbol>,<Stock1 Volume>,<Stock1 Purchase Date>;"
+                + "<Stock2 Symbol>,<Stock2 Volume>,<Stock2 Purchase Date>;... format).");
+        prompts.add("The format for the date is MM-dd-yyyy.");
       } else if (this.pageState.getCurrentPage() == ePage.FLEXIBLE_SELL_STOCKS_PROMPT) {
         prompts.add("Enter the stocks for the portfolio you would like to create \n"
-            + "(enter in <Stock1 Symbol>,<Stock1 Volume>,<Stock1 Sale Date>;"
-            + "<Stock2 Symbol>,<Stock2 Volume>,<Stock2 Sale Date>;... format).");
+                + "(enter in <Stock1 Symbol>,<Stock1 Volume>,<Stock1 Sale Date>;"
+                + "<Stock2 Symbol>,<Stock2 Volume>,<Stock2 Sale Date>;... format).");
+        prompts.add("The format for the date is MM-dd-yyyy.");
+      } else if (this.pageState.getCurrentPage() == ePage.FLEXIBLE_REBALANCE_WEIGHT_PROMPT) {
+        prompts.add("Enter the stocks and weights for the portfolio you would like to rebalance "
+                + "in order of appearance from above \n"
+                + "(enter in <Stock1 Symbol>,<Stock1 Percent>,;"
+                + "<Stock2 Symbol>,<Stock2 Percent>;... format).");
+        prompts.add("The format for the perent is 80% equals input: 80.");
       } else {
         throw new NotImplementedException("Action for page is not implemented!");
       }
 
-      prompts.add("The format for the date is MM-dd-yyyy.");
       prompts.add("(H) Go back to Home page.");
 
       return prompts;
@@ -1337,6 +1427,10 @@ public class PortfolioController implements IPortfolioController {
           this.pageState.setErrorMessage("Input error: Invalid stocks entered!");
         }
         return ePage.FLEXIBLE_SELL_STOCKS_PROMPT;
+      }
+      if (this.pageState.getCurrentPage() == ePage.FLEXIBLE_REBALANCE_WEIGHT_PROMPT) {
+        this.pageState.setToInterpretInput(currentInput);
+        return ePage.FLEXIBLE_REBALANCE_WEIGHT_PROMPT;
       } else {
         throw new NotImplementedException("Action for page is not implemented!");
       }
@@ -1360,10 +1454,10 @@ public class PortfolioController implements IPortfolioController {
      * @param isExport  whether this page is being initialized for an export operation.
      */
     ImportExportPromptPage(IPortfolioModel model,
-        IPortfolioView view,
-        Appendable out,
-        IPageState pageState,
-        boolean isExport) {
+                           IPortfolioView view,
+                           Appendable out,
+                           IPageState pageState,
+                           boolean isExport) {
       super(model, view, out, pageState);
       this.isExport = isExport;
     }
@@ -1377,10 +1471,10 @@ public class PortfolioController implements IPortfolioController {
       this.pageState.setToInterpretInput(null);
       List<String> prompts = getPrompts();
       this.processOutput(
-          this.view.displayGenericPathPromptPage(
-              this.getPageLabel(),
-              prompts,
-              this.pageState.getErrorMessage()));
+              this.view.displayGenericPathPromptPage(
+                      this.getPageLabel(),
+                      prompts,
+                      this.pageState.getErrorMessage()));
     }
 
     @Override
@@ -1389,23 +1483,23 @@ public class PortfolioController implements IPortfolioController {
       if (this.isExport) {
         prompts.add("Enter the path of file to which the portfolios are to be exported.");
         prompts.add(
-            "Do note that the .csv file should have the following headers in the given sequence:");
+                "Do note that the .csv file should have the following headers in the given sequence:");
         prompts.add("PortfolioName,"
-            + "StockSymbol,"
-            + "StockName,"
-            + "StockExchange,"
-            + "StockVolume");
+                + "StockSymbol,"
+                + "StockName,"
+                + "StockExchange,"
+                + "StockVolume");
       } else {
         prompts.add("Enter the path of file from which the portfolios are to be imported.");
         prompts.add(
-            "Do note that the .csv file should have the following headers in the given sequence:");
+                "Do note that the .csv file should have the following headers in the given sequence:");
         prompts.add("PortfolioName,"
-            + "StockSymbol,"
-            + "StockName,"
-            + "StockExchange,"
-            + "StockTransactionDate,"
-            + "StockTransactionVolume,"
-            + "StockTransactionCommissionFees");
+                + "StockSymbol,"
+                + "StockName,"
+                + "StockExchange,"
+                + "StockTransactionDate,"
+                + "StockTransactionVolume,"
+                + "StockTransactionCommissionFees");
       }
       prompts.add("(H) Go back to Home page.");
 
@@ -1420,11 +1514,11 @@ public class PortfolioController implements IPortfolioController {
         this.pageState.setToInterpretInput(currentInput);
 
         if (this.pageState.getCurrentPage() == ePage.EXPORT_PROMPT
-            || this.pageState.getCurrentPage() == ePage.IMPORT_PROMPT) {
+                || this.pageState.getCurrentPage() == ePage.IMPORT_PROMPT) {
 
           return this.isExport ? ePage.EXPORT_RESULT : ePage.IMPORT_RESULT;
         } else if (this.pageState.getCurrentPage() == ePage.FLEXIBLE_EXPORT_PROMPT
-            || this.pageState.getCurrentPage() == ePage.FLEXIBLE_IMPORT_PROMPT) {
+                || this.pageState.getCurrentPage() == ePage.FLEXIBLE_IMPORT_PROMPT) {
 
           return this.isExport ? ePage.FLEXIBLE_EXPORT_RESULT : ePage.FLEXIBLE_IMPORT_RESULT;
         } else {
@@ -1434,11 +1528,11 @@ public class PortfolioController implements IPortfolioController {
         this.pageState.setErrorMessage("Input error: Invalid file path entered!");
 
         if (this.pageState.getCurrentPage() == ePage.EXPORT_PROMPT
-            || this.pageState.getCurrentPage() == ePage.IMPORT_PROMPT) {
+                || this.pageState.getCurrentPage() == ePage.IMPORT_PROMPT) {
 
           return this.isExport ? ePage.EXPORT_PROMPT : ePage.IMPORT_PROMPT;
         } else if (this.pageState.getCurrentPage() == ePage.FLEXIBLE_EXPORT_PROMPT
-            || this.pageState.getCurrentPage() == ePage.FLEXIBLE_IMPORT_PROMPT) {
+                || this.pageState.getCurrentPage() == ePage.FLEXIBLE_IMPORT_PROMPT) {
 
           return this.isExport ? ePage.FLEXIBLE_EXPORT_PROMPT : ePage.FLEXIBLE_IMPORT_PROMPT;
         } else {
@@ -1465,10 +1559,10 @@ public class PortfolioController implements IPortfolioController {
      * @param isExport  whether this page is being initialized for an export operation.
      */
     ImportExportResultPage(IPortfolioModel model,
-        IPortfolioView view,
-        Appendable out,
-        IPageState pageState,
-        boolean isExport) {
+                           IPortfolioView view,
+                           Appendable out,
+                           IPageState pageState,
+                           boolean isExport) {
       super(model, view, out, pageState);
       this.isExport = isExport;
     }
@@ -1485,7 +1579,7 @@ public class PortfolioController implements IPortfolioController {
       boolean operationResult = true;
 
       if (this.pageState.getCurrentPage() == ePage.IMPORT_RESULT
-          || this.pageState.getCurrentPage() == ePage.EXPORT_RESULT) {
+              || this.pageState.getCurrentPage() == ePage.EXPORT_RESULT) {
         if (this.isExport) {
           try {
             this.model.exportPortfolios(filePath);
@@ -1502,7 +1596,7 @@ public class PortfolioController implements IPortfolioController {
           }
         }
       } else if (this.pageState.getCurrentPage() == ePage.FLEXIBLE_IMPORT_RESULT
-          || this.pageState.getCurrentPage() == ePage.FLEXIBLE_EXPORT_RESULT) {
+              || this.pageState.getCurrentPage() == ePage.FLEXIBLE_EXPORT_RESULT) {
         if (this.isExport) {
           try {
             this.model.exportFlexiblePortfolios(filePath);
@@ -1524,12 +1618,12 @@ public class PortfolioController implements IPortfolioController {
 
       List<String> prompts = this.getPrompts();
       this.processOutput(
-          this.view.displayGenericPathPromptResultPage(
-              this.getPageLabel(),
-              filePath,
-              operationResult,
-              prompts,
-              this.pageState.getErrorMessage()));
+              this.view.displayGenericPathPromptResultPage(
+                      this.getPageLabel(),
+                      filePath,
+                      operationResult,
+                      prompts,
+                      this.pageState.getErrorMessage()));
     }
 
     @Override
@@ -1560,10 +1654,10 @@ public class PortfolioController implements IPortfolioController {
      * @param pageState the current state of the page.
      */
     PerformanceResultPage(
-        IPortfolioModel model,
-        IPortfolioView view,
-        Appendable out,
-        IPageState pageState) {
+            IPortfolioModel model,
+            IPortfolioView view,
+            Appendable out,
+            IPageState pageState) {
       super(model, view, out, pageState);
     }
 
@@ -1578,17 +1672,17 @@ public class PortfolioController implements IPortfolioController {
         List<String> prompts = getPrompts();
         try {
           IChart pChart = this.model.getPerformanceChart(this.pageState.getPortfolioId(),
-              this.pageState.getDate(), endDate);
+                  this.pageState.getDate(), endDate);
 
           this.processOutput(
-              this.view.displayFlexiblePortfolioPerformancePage(pName, this.pageState.getDate(),
-                  endDate, pChart, prompts, this.pageState.getErrorMessage()));
+                  this.view.displayFlexiblePortfolioPerformancePage(pName, this.pageState.getDate(),
+                          endDate, pChart, prompts, this.pageState.getErrorMessage()));
 
         } catch (StockDataSourceException e) {
           this.pageState.setErrorMessage(e.getMessage());
           this.processOutput(
-              this.view.displayGenericResultPage("Performance chart error", false, prompts,
-                  this.pageState.getErrorMessage()));
+                  this.view.displayGenericResultPage("Performance chart error", false, prompts,
+                          this.pageState.getErrorMessage()));
         }
       } else {
         throw new NotImplementedException("Action for page is not implemented!");
@@ -1624,10 +1718,10 @@ public class PortfolioController implements IPortfolioController {
      * @param pageState the current state of the page.
      */
     SelectPortfolioPromptPage(
-        IPortfolioModel model,
-        IPortfolioView view,
-        Appendable out,
-        IPageState pageState) {
+            IPortfolioModel model,
+            IPortfolioView view,
+            Appendable out,
+            IPageState pageState) {
       super(model, view, out, pageState);
     }
 
@@ -1637,53 +1731,61 @@ public class PortfolioController implements IPortfolioController {
       List<String> prompts = getPrompts();
       if (this.pageState.getCurrentPage() == ePage.COMPOSITION_PORTFOLIO_PROMPT) {
         this.processOutput(
-            this.view.displayGenericPortfolioPromptPage(
-                "Regular Portfolio Composition",
-                this.model.getAllPortfolios(),
-                prompts,
-                this.pageState.getErrorMessage()));
+                this.view.displayGenericPortfolioPromptPage(
+                        "Regular Portfolio Composition",
+                        this.model.getAllPortfolios(),
+                        prompts,
+                        this.pageState.getErrorMessage()));
       } else if (this.pageState.getCurrentPage() == ePage.FLEXIBLE_COMPOSITION_PORTFOLIO_PROMPT) {
         this.processOutput(
-            this.view.displayGenericPortfolioPromptPage(
-                "Flexible Portfolio Composition",
-                this.model.getAllFlexiblePortfolios(),
-                prompts,
-                this.pageState.getErrorMessage()));
+                this.view.displayGenericPortfolioPromptPage(
+                        "Flexible Portfolio Composition",
+                        this.model.getAllFlexiblePortfolios(),
+                        prompts,
+                        this.pageState.getErrorMessage()));
       } else if (this.pageState.getCurrentPage() == ePage.FLEXIBLE_BUY_PORTFOLIO_PROMPT) {
         this.processOutput(
-            this.view.displayGenericPortfolioPromptPage(
-                "Buy Stocks",
-                this.model.getAllFlexiblePortfolios(),
-                prompts,
-                this.pageState.getErrorMessage()));
+                this.view.displayGenericPortfolioPromptPage(
+                        "Buy Stocks",
+                        this.model.getAllFlexiblePortfolios(),
+                        prompts,
+                        this.pageState.getErrorMessage()));
       } else if (this.pageState.getCurrentPage() == ePage.FLEXIBLE_SELL_PORTFOLIO_PROMPT) {
         this.processOutput(
-            this.view.displayGenericPortfolioPromptPage(
-                "Sell Stocks",
-                this.model.getAllFlexiblePortfolios(),
-                prompts,
-                this.pageState.getErrorMessage()));
+                this.view.displayGenericPortfolioPromptPage(
+                        "Sell Stocks",
+                        this.model.getAllFlexiblePortfolios(),
+                        prompts,
+                        this.pageState.getErrorMessage()));
       } else if (this.pageState.getCurrentPage() == ePage.FLEXIBLE_VALUE_PORTFOLIO_PROMPT) {
         this.processOutput(
-            this.view.displayGenericPortfolioPromptPage(
-                "Flexible Portfolio Value",
-                this.model.getAllFlexiblePortfolios(),
-                prompts,
-                this.pageState.getErrorMessage()));
+                this.view.displayGenericPortfolioPromptPage(
+                        "Flexible Portfolio Value",
+                        this.model.getAllFlexiblePortfolios(),
+                        prompts,
+                        this.pageState.getErrorMessage()));
       } else if (this.pageState.getCurrentPage() == ePage.FLEXIBLE_COST_BASIS_PORTFOLIO_PROMPT) {
         this.processOutput(
-            this.view.displayGenericPortfolioPromptPage(
-                "Flexible Portfolio Cost Basis",
-                this.model.getAllFlexiblePortfolios(),
-                prompts,
-                this.pageState.getErrorMessage()));
+                this.view.displayGenericPortfolioPromptPage(
+                        "Flexible Portfolio Cost Basis",
+                        this.model.getAllFlexiblePortfolios(),
+                        prompts,
+                        this.pageState.getErrorMessage()));
       } else if (this.pageState.getCurrentPage() == ePage.FLEXIBLE_PERFORMANCE_PORTFOLIO_PROMPT) {
         this.processOutput(
-            this.view.displayGenericPortfolioPromptPage(
-                "Flexible Portfolio Performance",
-                this.model.getAllFlexiblePortfolios(),
-                prompts,
-                this.pageState.getErrorMessage()));
+                this.view.displayGenericPortfolioPromptPage(
+                        "Flexible Portfolio Performance",
+                        this.model.getAllFlexiblePortfolios(),
+                        prompts,
+                        this.pageState.getErrorMessage()));
+
+      } else if (this.pageState.getCurrentPage() == ePage.FLEXIBLE_REBALANCE_PROMPT) {
+        this.processOutput(
+                this.view.displayGenericPortfolioPromptPage(
+                        "Flexible Portfolio Rebalance",
+                        this.model.getAllFlexiblePortfolios(),
+                        prompts,
+                        this.pageState.getErrorMessage()));
       } else {
         throw new NotImplementedException("Action for page is not implemented!");
       }
@@ -1697,19 +1799,21 @@ public class PortfolioController implements IPortfolioController {
         prompts.add("Enter the id of the portfolio you would like to see the composition for: ");
       } else if (this.pageState.getCurrentPage() == ePage.FLEXIBLE_COMPOSITION_PORTFOLIO_PROMPT) {
         prompts.add(
-            "Enter the id of the flexible portfolio you would like to see the composition for: ");
+                "Enter the id of the flexible portfolio you would like to see the composition for: ");
       } else if (this.pageState.getCurrentPage() == ePage.FLEXIBLE_BUY_PORTFOLIO_PROMPT) {
         prompts.add("Enter the id of the flexible portfolio you would like to buy stocks for: ");
       } else if (this.pageState.getCurrentPage() == ePage.FLEXIBLE_SELL_PORTFOLIO_PROMPT) {
         prompts.add("Enter the id of the flexible portfolio you would like to sell stocks for: ");
       } else if (this.pageState.getCurrentPage() == ePage.FLEXIBLE_VALUE_PORTFOLIO_PROMPT) {
         prompts.add("Enter the id of the flexible portfolio you would like to get value for: ");
+      } else if (this.pageState.getCurrentPage() == ePage.FLEXIBLE_REBALANCE_PROMPT) {
+        prompts.add("Enter the id of the flexible portfolio you would like to get value for: ");
       } else if (this.pageState.getCurrentPage() == ePage.FLEXIBLE_COST_BASIS_PORTFOLIO_PROMPT) {
         prompts.add(
-            "Enter the id of the flexible portfolio you would like to get cost basis for: ");
+                "Enter the id of the flexible portfolio you would like to get cost basis for: ");
       } else if (this.pageState.getCurrentPage() == ePage.FLEXIBLE_PERFORMANCE_PORTFOLIO_PROMPT) {
         prompts.add(
-            "Enter the id of the flexible portfolio you would like to get performance chart for: ");
+                "Enter the id of the flexible portfolio you would like to get performance chart for: ");
       } else {
         throw new NotImplementedException("Action for page is not implemented!");
       }
@@ -1772,11 +1876,19 @@ public class PortfolioController implements IPortfolioController {
           this.pageState.setErrorMessage("Input error: Invalid Portfolio Id entered!");
           return ePage.FLEXIBLE_COST_BASIS_PORTFOLIO_PROMPT;
         }
+      } else if (this.pageState.getCurrentPage() == ePage.FLEXIBLE_REBALANCE_PROMPT) {
+        if (this.isValidFlexibleIdRequested(currentInput)) {
+          this.pageState.setToInterpretInput(currentInput);
+          return ePage.FLEXIBLE_REBALANCE_DATE_PROMPT;
+        } else {
+          this.pageState.setErrorMessage("Input error: Invalid Portfolio Id entered!");
+          return ePage.FLEXIBLE_COST_BASIS_PORTFOLIO_PROMPT;
+        }
       } else if (this.pageState.getCurrentPage() == ePage.FLEXIBLE_PERFORMANCE_PORTFOLIO_PROMPT) {
         if (this.isValidFlexibleIdRequested(currentInput)) {
 
           IFlexiblePortfolio p = this.model.getFlexiblePortfolio(
-              Utils.convertStringToNumber(currentInput) - 1);
+                  Utils.convertStringToNumber(currentInput) - 1);
 
           if (p.getStocks() == null || p.getStocks().size() == 0) {
             this.pageState.setErrorMessage("The selected portfolio doesn't have any stocks!");
@@ -1809,10 +1921,10 @@ public class PortfolioController implements IPortfolioController {
      * @param pageState the current state of the page.
      */
     ValueDatePromptPage(
-        IPortfolioModel model,
-        IPortfolioView view,
-        Appendable out,
-        IPageState pageState) {
+            IPortfolioModel model,
+            IPortfolioView view,
+            Appendable out,
+            IPageState pageState) {
       super(model, view, out, pageState);
     }
 
@@ -1827,17 +1939,17 @@ public class PortfolioController implements IPortfolioController {
       this.pageState.setToInterpretInput(null);
       List<String> prompts = getPrompts();
       this.processOutput(
-          this.view.displayValueDatePromptPage(
-              this.model.getPortfolio(this.pageState.getPortfolioId()).getName(), prompts,
-              this.pageState.getErrorMessage()));
+              this.view.displayValueDatePromptPage(
+                      this.model.getPortfolio(this.pageState.getPortfolioId()).getName(), prompts,
+                      this.pageState.getErrorMessage()));
     }
 
     @Override
     public List<String> getPrompts() {
       List<String> prompts = new ArrayList<>();
       prompts.add(
-          "Enter the date on which you would like to see the value for the portfolio "
-              + "(use mm-dd-yyyy format): ");
+              "Enter the date on which you would like to see the value for the portfolio "
+                      + "(use mm-dd-yyyy format): ");
       prompts.add("(H) Go back to Home page.");
 
       return prompts;
@@ -1873,10 +1985,10 @@ public class PortfolioController implements IPortfolioController {
      * @param pageState the current state of the page.
      */
     ValuePortfolioPromptPage(
-        IPortfolioModel model,
-        IPortfolioView view,
-        Appendable out,
-        IPageState pageState) {
+            IPortfolioModel model,
+            IPortfolioView view,
+            Appendable out,
+            IPageState pageState) {
       super(model, view, out, pageState);
     }
 
@@ -1885,11 +1997,11 @@ public class PortfolioController implements IPortfolioController {
       this.pageState.setToInterpretInput(null);
       List<String> prompts = getPrompts();
       this.processOutput(
-          this.view.displayGenericPortfolioPromptPage(
-              "Value",
-              this.model.getAllPortfolios(),
-              prompts,
-              this.pageState.getErrorMessage()));
+              this.view.displayGenericPortfolioPromptPage(
+                      "Value",
+                      this.model.getAllPortfolios(),
+                      prompts,
+                      this.pageState.getErrorMessage()));
     }
 
     @Override
@@ -1930,10 +2042,10 @@ public class PortfolioController implements IPortfolioController {
      * @param pageState the current state of the page.
      */
     ValueResultPage(
-        IPortfolioModel model,
-        IPortfolioView view,
-        Appendable out,
-        IPageState pageState) {
+            IPortfolioModel model,
+            IPortfolioView view,
+            Appendable out,
+            IPageState pageState) {
       super(model, view, out, pageState);
     }
 
@@ -1954,8 +2066,8 @@ public class PortfolioController implements IPortfolioController {
 
         List<String> prompts = getPrompts();
         this.processOutput(
-            this.view.displayValueResultPage(pName, pValues, prompts,
-                this.pageState.getErrorMessage()));
+                this.view.displayValueResultPage(pName, pValues, prompts,
+                        this.pageState.getErrorMessage()));
 
       } else if (this.pageState.getCurrentPage() == ePage.FLEXIBLE_VALUE_RESULT) {
         String pName = this.model.getFlexiblePortfolio(this.pageState.getPortfolioId()).getName();
@@ -1969,8 +2081,8 @@ public class PortfolioController implements IPortfolioController {
 
         List<String> prompts = getPrompts();
         this.processOutput(
-            this.view.displayValueResultPage(pName, pValues, prompts,
-                this.pageState.getErrorMessage()));
+                this.view.displayValueResultPage(pName, pValues, prompts,
+                        this.pageState.getErrorMessage()));
       } else {
         throw new NotImplementedException("Action for page is not implemented!");
       }
@@ -2005,10 +2117,10 @@ public class PortfolioController implements IPortfolioController {
      * @param pageState the current state of the page.
      */
     GenericResultPage(
-        IPortfolioModel model,
-        IPortfolioView view,
-        Appendable out,
-        IPageState pageState) {
+            IPortfolioModel model,
+            IPortfolioView view,
+            Appendable out,
+            IPageState pageState) {
       super(model, view, out, pageState);
     }
 
@@ -2044,12 +2156,12 @@ public class PortfolioController implements IPortfolioController {
 
       List<String> prompts = this.getPrompts();
       this.processOutput(
-          this.view.displayGenericResultPage(
-              pageLabel,
-              this.pageState.getErrorMessage() == null || this.pageState.getErrorMessage()
-                  .isBlank(),
-              prompts,
-              this.pageState.getErrorMessage()));
+              this.view.displayGenericResultPage(
+                      pageLabel,
+                      this.pageState.getErrorMessage() == null || this.pageState.getErrorMessage()
+                              .isBlank(),
+                      prompts,
+                      this.pageState.getErrorMessage()));
     }
 
     @Override
@@ -2096,10 +2208,10 @@ public class PortfolioController implements IPortfolioController {
    *              controller.
    */
   public PortfolioController(
-      IPortfolioModel model,
-      IPortfolioView view,
-      Readable in,
-      Appendable out) {
+          IPortfolioModel model,
+          IPortfolioView view,
+          Readable in,
+          Appendable out) {
     this.model = model;
     this.view = view;
     this.out = out;
@@ -2120,52 +2232,52 @@ public class PortfolioController implements IPortfolioController {
   private void setHomePage() {
     this.pageState.setCurrentPage(ePage.HOMEPAGE);
     this.currentPageObject = knownPages
-        .get(this.pageState.getCurrentPage())
-        .apply(this.pageState.getCurrentPage());
+            .get(this.pageState.getCurrentPage())
+            .apply(this.pageState.getCurrentPage());
   }
 
   private void setupPageMap() {
     knownPages = new HashMap<>();
     knownPages.put(ePage.HOMEPAGE,
-        p -> new HomePage(this.model, this.view, this.out, this.pageState));
+            p -> new HomePage(this.model, this.view, this.out, this.pageState));
 
     //</editor-fold desc="regular portfolio pages">
 
     // Composition
     knownPages.put(ePage.COMPOSITION_PORTFOLIO_PROMPT,
-        p -> new CompositionPortfolioPromptPage(this.model, this.view, this.out, this.pageState));
+            p -> new CompositionPortfolioPromptPage(this.model, this.view, this.out, this.pageState));
     knownPages.put(ePage.COMPOSITION_RESULT,
-        p -> new CompositionResultPage(this.model, this.view, this.out, this.pageState));
+            p -> new CompositionResultPage(this.model, this.view, this.out, this.pageState));
 
     // Value
     knownPages.put(ePage.VALUE_PORTFOLIO_PROMPT,
-        p -> new ValuePortfolioPromptPage(this.model, this.view, this.out, this.pageState));
+            p -> new ValuePortfolioPromptPage(this.model, this.view, this.out, this.pageState));
     knownPages.put(ePage.VALUE_DATE_PROMPT,
-        p -> new ValueDatePromptPage(this.model, this.view, this.out, this.pageState));
+            p -> new ValueDatePromptPage(this.model, this.view, this.out, this.pageState));
     knownPages.put(ePage.VALUE_RESULT,
-        p -> new ValueResultPage(this.model, this.view, this.out, this.pageState));
+            p -> new ValueResultPage(this.model, this.view, this.out, this.pageState));
 
     // Add portfolio
     knownPages.put(ePage.ADD_PORTFOLIO_NAME_PROMPT,
-        p -> new AddPortfolioNamePromptPage(this.model, this.view, this.out, this.pageState));
+            p -> new AddPortfolioNamePromptPage(this.model, this.view, this.out, this.pageState));
     knownPages.put(ePage.ADD_PORTFOLIO_STOCKS_PROMPT,
-        p -> new AddPortfolioStocksPromptPage(this.model, this.view, this.out, this.pageState));
+            p -> new AddPortfolioStocksPromptPage(this.model, this.view, this.out, this.pageState));
 
     // Export
     knownPages.put(ePage.EXPORT_PROMPT,
-        p -> new ImportExportPromptPage(this.model, this.view, this.out, this.pageState,
-            true));
+            p -> new ImportExportPromptPage(this.model, this.view, this.out, this.pageState,
+                    true));
     knownPages.put(ePage.EXPORT_RESULT,
-        p -> new ImportExportResultPage(this.model, this.view, this.out, this.pageState,
-            true));
+            p -> new ImportExportResultPage(this.model, this.view, this.out, this.pageState,
+                    true));
 
     // Import
     knownPages.put(ePage.IMPORT_PROMPT,
-        p -> new ImportExportPromptPage(this.model, this.view, this.out, this.pageState,
-            false));
+            p -> new ImportExportPromptPage(this.model, this.view, this.out, this.pageState,
+                    false));
     knownPages.put(ePage.IMPORT_RESULT,
-        p -> new ImportExportResultPage(this.model, this.view, this.out, this.pageState,
-            false));
+            p -> new ImportExportResultPage(this.model, this.view, this.out, this.pageState,
+                    false));
 
     //</editor-fold>
 
@@ -2173,75 +2285,85 @@ public class PortfolioController implements IPortfolioController {
 
     // Flexible Composition
     knownPages.put(ePage.FLEXIBLE_COMPOSITION_PORTFOLIO_PROMPT,
-        p -> new SelectPortfolioPromptPage(this.model, this.view, this.out, this.pageState));
+            p -> new SelectPortfolioPromptPage(this.model, this.view, this.out, this.pageState));
     knownPages.put(ePage.FLEXIBLE_COMPOSITION_DATE_PROMPT,
-        p -> new DatePromptPage(this.model, this.view, this.out, this.pageState));
+            p -> new DatePromptPage(this.model, this.view, this.out, this.pageState));
     knownPages.put(ePage.FLEXIBLE_COMPOSITION_RESULT,
-        p -> new CompositionResultPage(this.model, this.view, this.out, this.pageState));
+            p -> new CompositionResultPage(this.model, this.view, this.out, this.pageState));
 
     // Flexible Value
     knownPages.put(ePage.FLEXIBLE_VALUE_PORTFOLIO_PROMPT,
-        p -> new SelectPortfolioPromptPage(this.model, this.view, this.out, this.pageState));
+            p -> new SelectPortfolioPromptPage(this.model, this.view, this.out, this.pageState));
     knownPages.put(ePage.FLEXIBLE_VALUE_DATE_PROMPT,
-        p -> new DatePromptPage(this.model, this.view, this.out, this.pageState));
+            p -> new DatePromptPage(this.model, this.view, this.out, this.pageState));
     knownPages.put(ePage.FLEXIBLE_VALUE_RESULT,
-        p -> new ValueResultPage(this.model, this.view, this.out, this.pageState));
+            p -> new ValueResultPage(this.model, this.view, this.out, this.pageState));
 
     // Flexible Add portfolio
     knownPages.put(ePage.FLEXIBLE_ADD_PORTFOLIO_NAME_PROMPT,
-        p -> new AddPortfolioNamePromptPage(this.model, this.view, this.out, this.pageState));
+            p -> new AddPortfolioNamePromptPage(this.model, this.view, this.out, this.pageState));
     knownPages.put(ePage.FLEXIBLE_ADD_PORTFOLIO_RESULT,
-        p -> new GenericResultPage(this.model, this.view, this.out, this.pageState));
+            p -> new GenericResultPage(this.model, this.view, this.out, this.pageState));
 
     // Flexible Export
     knownPages.put(ePage.FLEXIBLE_EXPORT_PROMPT,
-        p -> new ImportExportPromptPage(this.model, this.view, this.out, this.pageState, true));
+            p -> new ImportExportPromptPage(this.model, this.view, this.out, this.pageState, true));
     knownPages.put(ePage.FLEXIBLE_EXPORT_RESULT,
-        p -> new ImportExportResultPage(this.model, this.view, this.out, this.pageState, true));
+            p -> new ImportExportResultPage(this.model, this.view, this.out, this.pageState, true));
 
     // Flexible Import
     knownPages.put(ePage.FLEXIBLE_IMPORT_PROMPT,
-        p -> new ImportExportPromptPage(this.model, this.view, this.out, this.pageState, false));
+            p -> new ImportExportPromptPage(this.model, this.view, this.out, this.pageState, false));
     knownPages.put(ePage.FLEXIBLE_IMPORT_RESULT,
-        p -> new ImportExportResultPage(this.model, this.view, this.out, this.pageState, false));
+            p -> new ImportExportResultPage(this.model, this.view, this.out, this.pageState, false));
 
     // Flexible Commission Fee
     knownPages.put(ePage.FLEXIBLE_COMMISSION_FEE_PROMPT,
-        p -> new CommissionFeePromptPage(this.model, this.view, this.out, this.pageState));
+            p -> new CommissionFeePromptPage(this.model, this.view, this.out, this.pageState));
     knownPages.put(ePage.FLEXIBLE_COMMISSION_FEE_RESULT,
-        p -> new GenericResultPage(this.model, this.view, this.out, this.pageState));
+            p -> new GenericResultPage(this.model, this.view, this.out, this.pageState));
 
     // Flexible Buy
     knownPages.put(ePage.FLEXIBLE_BUY_PORTFOLIO_PROMPT,
-        p -> new SelectPortfolioPromptPage(this.model, this.view, this.out, this.pageState));
+            p -> new SelectPortfolioPromptPage(this.model, this.view, this.out, this.pageState));
     knownPages.put(ePage.FLEXIBLE_BUY_STOCKS_PROMPT,
-        p -> new FlexiblePortfolioStocksPromptPage(this.model, this.view, this.out,
-            this.pageState));
+            p -> new FlexiblePortfolioStocksPromptPage(this.model, this.view, this.out,
+                    this.pageState));
 
     // Flexible Sell
     knownPages.put(ePage.FLEXIBLE_SELL_PORTFOLIO_PROMPT,
-        p -> new SelectPortfolioPromptPage(this.model, this.view, this.out, this.pageState));
+            p -> new SelectPortfolioPromptPage(this.model, this.view, this.out, this.pageState));
     knownPages.put(ePage.FLEXIBLE_SELL_STOCKS_PROMPT,
-        p -> new FlexiblePortfolioStocksPromptPage(this.model, this.view, this.out,
-            this.pageState));
+            p -> new FlexiblePortfolioStocksPromptPage(this.model, this.view, this.out,
+                    this.pageState));
 
     // Flexible Cost Basis
     knownPages.put(ePage.FLEXIBLE_COST_BASIS_PORTFOLIO_PROMPT,
-        p -> new SelectPortfolioPromptPage(this.model, this.view, this.out, this.pageState));
+            p -> new SelectPortfolioPromptPage(this.model, this.view, this.out, this.pageState));
     knownPages.put(ePage.FLEXIBLE_COST_BASIS_DATE_PROMPT,
-        p -> new DatePromptPage(this.model, this.view, this.out, this.pageState));
+            p -> new DatePromptPage(this.model, this.view, this.out, this.pageState));
     knownPages.put(ePage.FLEXIBLE_COST_BASIS_RESULT,
-        p -> new CostBasisResultPage(this.model, this.view, this.out, this.pageState));
+            p -> new CostBasisResultPage(this.model, this.view, this.out, this.pageState));
 
     // Flexible Performance
     knownPages.put(ePage.FLEXIBLE_PERFORMANCE_PORTFOLIO_PROMPT,
-        p -> new SelectPortfolioPromptPage(this.model, this.view, this.out, this.pageState));
+            p -> new SelectPortfolioPromptPage(this.model, this.view, this.out, this.pageState));
     knownPages.put(ePage.FLEXIBLE_PERFORMANCE_START_DATE_PROMPT,
-        p -> new DatePromptPage(this.model, this.view, this.out, this.pageState));
+            p -> new DatePromptPage(this.model, this.view, this.out, this.pageState));
     knownPages.put(ePage.FLEXIBLE_PERFORMANCE_END_DATE_PROMPT,
-        p -> new DatePromptPage(this.model, this.view, this.out, this.pageState));
+            p -> new DatePromptPage(this.model, this.view, this.out, this.pageState));
     knownPages.put(ePage.FLEXIBLE_PERFORMANCE_RESULT,
-        p -> new PerformanceResultPage(this.model, this.view, this.out, this.pageState));
+            p -> new PerformanceResultPage(this.model, this.view, this.out, this.pageState));
+
+    // Flexible Rebalance
+    knownPages.put(ePage.FLEXIBLE_REBALANCE_PROMPT,
+            p -> new SelectPortfolioPromptPage(this.model, this.view, this.out, this.pageState));
+    knownPages.put(ePage.FLEXIBLE_REBALANCE_DATE_PROMPT,
+            p -> new DatePromptPage(this.model, this.view, this.out, this.pageState));
+    knownPages.put(ePage.FLEXIBLE_REBALANCE_WEIGHT_PROMPT,
+            p -> new FlexiblePortfolioStocksPromptPage(this.model, this.view, this.out, this.pageState));
+    knownPages.put(ePage.FLEXIBLE_REBALANCE_RESULT,
+            p -> new ValueResultPage(this.model, this.view, this.out, this.pageState));
 
     //</editor-fold>
   }
@@ -2260,17 +2382,17 @@ public class PortfolioController implements IPortfolioController {
         String currentInput = this.processInput();
         // take input for current page and let next iteration of loop deal with next page
         this.pageState.setCurrentPage(
-            this.currentPageObject.processInputAndGetNextPage(currentInput));
+                this.currentPageObject.processInputAndGetNextPage(currentInput));
 
         this.pageState = this.currentPageObject.getPageState();
 
         this.currentPageObject = knownPages
-            .get(this.pageState.getCurrentPage())
-            .apply(this.pageState.getCurrentPage());
+                .get(this.pageState.getCurrentPage())
+                .apply(this.pageState.getCurrentPage());
       } catch (Exception e) {
         // exception middleware to catch all exceptions without breaking application
         this.pageState.setErrorMessage("Unhandled exception: " + e.getMessage() + "\n"
-            + "Stack Trace: " + Arrays.toString(e.getStackTrace()) + "\n");
+                + "Stack Trace: " + Arrays.toString(e.getStackTrace()) + "\n");
         this.pageState.setToInterpretInput(null);
         this.setHomePage();
       }

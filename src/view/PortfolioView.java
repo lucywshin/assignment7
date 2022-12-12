@@ -161,6 +161,40 @@ public class PortfolioView implements IPortfolioView {
   }
 
   @Override
+  public String displayRebalancePage(String portfolioName, List<String> prompts,
+                                     List<IObservableFlexiblePortfolioStock> currentPortfolioStocks,
+                                           String errorMessage) {
+
+    StringBuilder stringToDisplay = new StringBuilder();
+
+    // header
+    this.displayPageHeader(stringToDisplay, "Rebalance Portfolio Prompt", errorMessage);
+
+    // content
+    stringToDisplay.append("Enter the date for which you would like to rebalance the \"")
+            .append(portfolioName + "\"")
+            .append(" portfolio's value.\n");
+
+    if (!currentPortfolioStocks.isEmpty()) {
+      stringToDisplay.append("Below are the stocks currently in the portfolio:\n");
+      for (IObservableFlexiblePortfolioStock ps : currentPortfolioStocks) {
+        stringToDisplay
+                .append("Symbol: ").append(ps.getSymbol())
+                .append(", Name: ").append(ps.getName())
+                .append(", Volume: ").append(ps.getVolume())
+                .append("\n");
+      }
+      stringToDisplay.append("In order of appearance, list weight percentages of each stock "
+              + "in format 00,00,...:\n");
+    }
+
+    // menu
+    this.displayPageMenu(stringToDisplay, prompts);
+
+    return stringToDisplay.toString();
+  }
+
+  @Override
   public String displayValueResultPage(String portfolioName,
       Pair<BigDecimal, List<IPortfolioStockValue>> portfolioStockValues, List<String> prompts,
       String errorMessage) {
@@ -345,16 +379,17 @@ public class PortfolioView implements IPortfolioView {
 
     StringBuilder stringToDisplay = new StringBuilder();
 
-    // header
-    this.displayPageHeader(stringToDisplay,
-        "Add Portfolio - Stocks Prompt", errorMessage);
-
-    // content
-    stringToDisplay.append("Enter in the stocks to ")
-        .append(actionName)
-        .append(" in the \"")
-        .append(portfolioName)
-        .append("\" portfolio.\n");
+    if (actionName.equals("buy") || actionName.equals("sell")) {
+      // header
+      this.displayPageHeader(stringToDisplay,
+              "Add Portfolio - Stocks Prompt", errorMessage);
+      // content
+      stringToDisplay.append("Enter in the stocks to ")
+              .append(actionName)
+              .append(" in the \"")
+              .append(portfolioName)
+              .append("\" portfolio.\n");
+    }
 
     if (!currentPortfolioStocks.isEmpty()) {
       stringToDisplay.append("Below are the stocks currently in the portfolio:\n");
