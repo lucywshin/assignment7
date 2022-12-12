@@ -1,9 +1,12 @@
 package features;
 
 import common.pair.Pair;
+
 import java.math.BigDecimal;
 import java.util.Date;
 import java.util.List;
+
+import model.portfolio.StockDataSourceException;
 import model.portfolio.eRecurringIntervalType;
 
 /**
@@ -127,9 +130,41 @@ public interface IPortfolioManagerFeatures {
    * @return whether the operation was successful.
    */
   boolean addDollarCostInvestmentForPortfolio(int portfolioId, Date date, BigDecimal amount,
-      List<Pair<String, BigDecimal>> stocksWithPercentage, BigDecimal commissionFee,
-      boolean isRecurring, Date endDate, eRecurringIntervalType intervalType,
-      Integer intervalDelta);
+                                              List<Pair<String, BigDecimal>> stocksWithPercentage, BigDecimal commissionFee,
+                                              boolean isRecurring, Date endDate, eRecurringIntervalType intervalType,
+                                              Integer intervalDelta);
+
+  /**
+   * Adds rebalanced weight data to the specified portfolio.
+   *
+   * @param portfolioId          the id of the portfolio.
+   * @param date                 the date on which the investment is to be made. This is the start
+   *                             date if the investment is recurring.
+   */
+  boolean loadPortfolioRebalance(int portfolioId, Date date);
+
+  /**
+   * Adds rebalanced weight data to the specified portfolio.
+   *
+   * @param portfolioId          the id of the portfolio.
+   * @param date                 the date on which the investment is to be made. This is the start
+   *                             date if the investment is recurring.
+   */
+  boolean loadPortfolioRebalanceDate(int portfolioId, Date date);
+
+  /**
+   * Adds a dollar cost investment to the specified portfolio.
+   *
+   * @param portfolioId          the id of the portfolio.
+   * @param date                 the date on which the investment is to be made. This is the start
+   *                             date if the investment is recurring.
+   * @param stocksWithPercentage a list of pairs containing the stock symbol and the percentage of
+   *                             the stock in the investment. The percentages should add up to 100.
+   * @return whether the operation was successful.
+   */
+  boolean addPortfolioRebalance(int portfolioId, Date date,
+                                List<Pair<String, BigDecimal>> stocksWithPercentage)
+          throws IllegalArgumentException, StockDataSourceException;
 
   /**
    * Loads the performance chart for the specified portfolio in the specified time range.

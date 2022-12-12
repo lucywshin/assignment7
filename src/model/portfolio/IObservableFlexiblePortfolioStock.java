@@ -5,6 +5,7 @@ import common.triplet.Triplet;
 import java.math.BigDecimal;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 
 /**
  * This interface represents a view only version of a flexible portfolio stock.
@@ -58,4 +59,13 @@ public interface IObservableFlexiblePortfolioStock extends IPortfolioStock {
    * @return a list of dollar cost investments.
    */
   List<IDollarCostInvestment> getDollarCostInvestments();
+
+  /**
+   * Gets all the rebalance investments in the specified portfolio.
+   *
+   * @return a list of pairs with the stock symbol and
+   *     the rebalance investment on that stock.
+   * @throws IllegalArgumentException when date provided is invalid or stocks provided are invalid.
+   */
+  List<IRebalance> getRebalance(Map<String, IRebalance> map) throws IllegalArgumentException;
 }

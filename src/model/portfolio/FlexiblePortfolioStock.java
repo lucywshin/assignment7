@@ -28,6 +28,8 @@ public class FlexiblePortfolioStock extends PortfolioStock implements IFlexibleP
 
   private final Map<Date, IDollarCostInvestment> dollarCostInvestmentMap;
 
+  private final Map<Date, IRebalance> rebalanceMap;
+
   //</editor-fold>
 
   //<editor-fold desc="Constructors">
@@ -42,8 +44,20 @@ public class FlexiblePortfolioStock extends PortfolioStock implements IFlexibleP
     // using Tree map, so we can traverse through items in map in order of dates
     this.transactionHistory = new TreeMap<>();
     this.dollarCostInvestmentMap = new TreeMap<>();
+    this.rebalanceMap = new TreeMap<>();
 
     this.addStockDollarCostInvestment(source, dollarCostInvestment);
+  }
+
+  FlexiblePortfolioStock(IStockDataSource source, IRebalance rebalance, String symbol, String name, String exchange
+                         ) throws StockDataSourceException {
+    super(symbol, name, exchange, new BigDecimal(0));
+    // using Tree map, so we can traverse through items in map in order of dates
+    this.transactionHistory = new TreeMap<>();
+    this.dollarCostInvestmentMap = new TreeMap<>();
+    this.rebalanceMap = new TreeMap<>();
+
+    this.addStockRebalance(source, rebalance);
   }
 
   /**
@@ -64,6 +78,7 @@ public class FlexiblePortfolioStock extends PortfolioStock implements IFlexibleP
     // using Tree map, so we can traverse through items in map in order of dates
     this.transactionHistory = new TreeMap<>();
     this.dollarCostInvestmentMap = new TreeMap<>();
+    this.rebalanceMap = new TreeMap<>();
 
     List<Triplet<BigDecimal, BigDecimal, BigDecimal>> stocksInTransaction = new ArrayList<>();
     stocksInTransaction.add(new Triplet<>(volume, purchasePrice, commissionFees));
@@ -85,6 +100,7 @@ public class FlexiblePortfolioStock extends PortfolioStock implements IFlexibleP
     super(symbol, name, exchange, totalVolume);
     this.transactionHistory = new TreeMap<>();
     this.dollarCostInvestmentMap = new TreeMap<>();
+    this.rebalanceMap = new TreeMap<>();
 
     // using Tree map, so we can traverse through items in map in order of dates
     BigDecimal totalVolumeTest = new BigDecimal(0);
@@ -364,6 +380,17 @@ public class FlexiblePortfolioStock extends PortfolioStock implements IFlexibleP
   }
 
   @Override
+  public void addStockRebalance(IStockDataSource source, IRebalance rebalance)
+          throws IllegalArgumentException {
+
+    // add rebalance in the past as transactions
+    Date currentDate = rebalance.getDate();
+
+    this.rebalanceMap.put(currentDate, rebalance);
+
+  }
+
+  @Override
   public List<IDollarCostInvestment> getDollarCostInvestments() {
     List<IDollarCostInvestment> result = new ArrayList<>();
 
@@ -374,5 +401,26 @@ public class FlexiblePortfolioStock extends PortfolioStock implements IFlexibleP
     return result;
   }
 
+  @Override
+  public List<IRebalance> getRebalanceData(Map<Date, IRebalance> map) {
+    List<IRebalance> result = new ArrayList<>();
+
+    for (var d : map.entrySet()) {
+      result.add(d.getValue());
+    }
+
+    return result;
+  }
+
+  @Override
+  public List<IRebalance> getRebalance(Map<String, IRebalance> map) {
+    List<IRebalance> result = new ArrayList<>();
+
+    for (var d : map.entrySet()) {
+      result.add(d.getValue());
+    }
+
+    return result;
+  }
   //</editor-fold>
 }

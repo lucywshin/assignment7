@@ -2,20 +2,16 @@ package view;
 
 import common.Utils;
 import common.pair.Pair;
-import features.IPortfolioManagerFeatures;
-import java.awt.FlowLayout;
-import java.awt.GridLayout;
+
+import java.awt.*;
 import java.math.BigDecimal;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.List;
-import javax.swing.BorderFactory;
-import javax.swing.BoxLayout;
-import javax.swing.JButton;
-import javax.swing.JFormattedTextField;
-import javax.swing.JLabel;
-import javax.swing.JPanel;
-import javax.swing.JScrollPane;
+
+import javax.swing.*;
+
+import features.IPortfolioManagerFeatures;
 import model.portfolio.IPortfolioStockValue;
 import view.JFrameView.eHomePageActionCommand;
 
@@ -171,24 +167,24 @@ class JSingleDateOperationPanel extends AbstractPanel {
       this.enterButton.addActionListener(e -> {
         if (this.validateInputFields()) {
           features.getPortfolioComposition(
-              this.portfolioId,
-              Utils.convertStringToDate(this.dateTextField.getText()));
+                  this.portfolioId,
+                  Utils.convertStringToDate(this.dateTextField.getText()));
         }
       });
     } else if (this.actionCommand == eHomePageActionCommand.VALUE) {
       this.enterButton.addActionListener(e -> {
         if (this.validateInputFields()) {
           features.getPortfolioValue(
-              this.portfolioId,
-              Utils.convertStringToDate(this.dateTextField.getText()));
+                  this.portfolioId,
+                  Utils.convertStringToDate(this.dateTextField.getText()));
         }
       });
     } else if (this.actionCommand == eHomePageActionCommand.COST_BASIS) {
       this.enterButton.addActionListener(e -> {
         if (this.validateInputFields()) {
           features.getPortfolioCostBasis(
-              this.portfolioId,
-              Utils.convertStringToDate(this.dateTextField.getText()));
+                  this.portfolioId,
+                  Utils.convertStringToDate(this.dateTextField.getText()));
         }
       });
     }

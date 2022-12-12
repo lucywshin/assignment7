@@ -2,9 +2,8 @@ package view;
 
 import common.Utils;
 import common.pair.Pair;
-import features.IPortfolioManagerFeatures;
-import java.awt.Dimension;
-import java.awt.GridLayout;
+
+import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.math.BigDecimal;
@@ -17,15 +16,10 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import javax.swing.BorderFactory;
-import javax.swing.BoxLayout;
-import javax.swing.JButton;
-import javax.swing.JCheckBox;
-import javax.swing.JComboBox;
-import javax.swing.JFormattedTextField;
-import javax.swing.JLabel;
-import javax.swing.JPanel;
-import javax.swing.JScrollPane;
+
+import javax.swing.*;
+
+import features.IPortfolioManagerFeatures;
 import model.portfolio.IDollarCostInvestment;
 import model.portfolio.eRecurringIntervalType;
 import view.JFrameView.eHomePageActionCommand;
